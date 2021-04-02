@@ -683,7 +683,12 @@ class DrillConnection {
 		$response = curl_exec($ch);
 		curl_close($ch);
 
-		return json_decode($response, true);
+		$result = json_decode($response, true);
+		if(isset($result)) {
+			return $result;
+		}
+
+		return array();
 	}
 
 	/**
