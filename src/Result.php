@@ -41,9 +41,9 @@ class Result {
 	 * @param $query
 	 */
 	function __construct($response, $query) {
-		$this->columns = $response['columns'];
-		$this->rows = $response['rows'];
-		$this->metadata = $response['metadata'];
+		$this->columns = isset($response['columns']) ? $response['columns'] : array();
+		$this->rows = isset($response['rows']) ? $response['rows'] : array();
+		$this->metadata = isset($response['metadata']) ? $response['metadata'] : array();
 		$this->query = $query;
 		$this->row_pointer = 0;
 
