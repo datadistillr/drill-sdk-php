@@ -339,36 +339,6 @@ class DrillConnection {
 		return $this->get_request($url);
 	}
 
-    /**
-     * Create Storage Plugin
-     *
-     * @param string $plugin_name
-     * @param string $config
-     * @return bool|null
-     * @throws \Exception
-     */
-    public function create_storage_plugin(string $plugin_name, string $config): ?bool {
-        $url = $this->build_url('storage');
-
-        $postData = array(
-            'name' => $plugin_name,
-            'config' => $config,
-            'options' => [
-                'drill.exec.http.rest.errors.verbose' => true
-            ]
-        );
-
-        $response = $this->post_request($url, $postData);
-
-        if (isset($response['errorMessage'])) {
-            $this->error_message = $response['errorMessage'];
-            $this->stack_trace = $response['stackTrace'] ?? '';
-            throw new \Exception("Error in storage plugin config: {$config}");
-        } else {
-            return true;
-        }
-    }
-
 	// endregion
 
 	// region Schema Methods
