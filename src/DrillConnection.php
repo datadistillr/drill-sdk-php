@@ -342,13 +342,13 @@ class DrillConnection {
     /**
      * Create Storage Plugin
      *
-     * @param string $plugin_name
-     * @param string $config
+     * @param string $plugin_name Storage Plugin Name
+     * @param array $config Config
      * @return bool|null
      * @throws \Exception
      */
-    public function create_storage_plugin(string $plugin_name, string $config): ?bool {
-        $url = $this->build_url('storage');
+    public function create_storage_plugin(string $plugin_name, array $config): ?bool {
+        $url = $this->build_url('plugin-info', $plugin_name);
 
         $postData = array(
             'name' => $plugin_name,
