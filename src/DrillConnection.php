@@ -363,7 +363,7 @@ class DrillConnection {
         if (isset($response['errorMessage'])) {
             $this->error_message = $response['errorMessage'];
             $this->stack_trace = $response['stackTrace'] ?? '';
-            throw new \Exception("Error in storage plugin config: {$config}");
+            throw new \Exception("Error in storage plugin config: " . print_r($config, true));
         } else {
             return true;
         }
