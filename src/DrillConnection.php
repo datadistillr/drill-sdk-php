@@ -352,10 +352,7 @@ class DrillConnection {
 
         $postData = array(
             'name' => $plugin_name,
-            'config' => $config,
-            'options' => [
-                'drill.exec.http.rest.errors.verbose' => true
-            ]
+            'config' => $config
         );
 
         $response = $this->post_request($url, $postData);
