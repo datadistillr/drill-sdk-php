@@ -354,14 +354,14 @@ class DrillConnection
     }
 
     /**
-     * Create Storage Plugin
+     * Save Storage Plugin. Creates or edits a storage plugin.
      *
      * @param string $plugin_name Storage Plugin Name
      * @param array $config Config
      * @return bool|null
      * @throws \Exception
      */
-    public function create_storage_plugin(string $plugin_name, array $config): ?bool
+    public function save_storage_plugin(string $plugin_name, array $config): ?bool
     {
         $url = $this->build_url('plugin-info', $plugin_name);
 
