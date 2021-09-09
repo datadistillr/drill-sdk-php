@@ -382,6 +382,30 @@ class DrillConnection
             return true;
         }
     }
+
+    /**
+     * Delete Storage Plugin
+     *
+     * @param string $plugin_name Storage Plugin Name
+     * @return bool|null
+     * @throws \Exception
+     */
+    public function delete_storage_plugin(string $plugin_name): ?bool
+    {
+        $url = $this->build_url('plugin-info', $plugin_name);
+
+        $response = $this->delete_request($url);
+
+        if (isset($response['errorMessage'])
+            || isset($response['result']) && strtolower($response['result']) !== 'success'
+            || !isset($response['result'])) {
+            $this->error_message = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
+            $this->stack_trace = $response['stackTrace'] ?? '';
+            throw new \Exception("Unable to delete storage plugin.");
+        } else {
+            return true;
+        }
+    }
     // endregion
 
     // region Schema Methods
@@ -765,6 +789,34 @@ class DrillConnection
                 CURLOPT_RETURNTRANSFER => TRUE,
                 CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
                 CURLOPT_POSTFIELDS => json_encode($postData)
+            )
+        );
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        $result = json_decode($response, true);
+        if (isset($result)) {
+            return $result;
+        }
+
+        return array();
+    }
+
+    /**
+     * Initiate DELETE Request to Drill server
+     *
+     * @param string $url Full URL Request to Drill Server
+     * @return array returns associative array
+     */
+    private function delete_request(string $url): array
+    {
+        // Setup cURL
+        $ch = curl_init($url);
+        curl_setopt_array($ch, array(
+                CURLOPT_CUSTOMREQUEST => "DELETE",
+                CURLOPT_RETURNTRANSFER => TRUE,
+                CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
+                // CURLOPT_POSTFIELDS => json_encode($postData)
             )
         );
         $response = curl_exec($ch);
