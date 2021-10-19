@@ -53,4 +53,5 @@ You can also use the connector to activate/deactivate Drill's storage as well as
 * **`get_enabled_storage_plugins()`**  Returns an array of all enabled plugins.
 * **`get_storage_plugins()`**  Returns an associative array of plugins and associated configuration options for all plugins.
 * **`get_storage_plugin_info( $plugin )`**  Returns an associative array of configuration options for a given plugin. 
-
+* **`save_storage_plugin( $plugin_name, $config )`**  Creates or edits a storage plugin. Returns true if successful, throws exception if not.
+* **`delete_storage_plugin( $plugin_name )`**  Deletes a storage plugin. Returns true if successful, throws exception if not.
