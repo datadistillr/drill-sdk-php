@@ -608,7 +608,7 @@ class DrillConnection
 
             if ($plugin_type === 'mongo') {
                 $mongo_quoted_file_name = $this->format_drill_table($file_name, false);
-                $sql = "SELECT ** FROM {$mongo_quoted_file_name} LIMIT 1";
+                $sql = "SELECT * FROM {$mongo_quoted_file_name} LIMIT 1";
             } else if (in_array($table_name, $views)) {
                 $view_name = "`{$plugin}.{$schema}`.`{$table_name}`"; // NOTE: escape char ` may need to go around plugin and schema separately
                 $sql = "SELECT * FROM {$view_name} LIMIT 1";
