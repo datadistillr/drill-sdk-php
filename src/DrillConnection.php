@@ -205,7 +205,7 @@ class DrillConnection {
 		if (! isset($plugin) || ! $this->isActive()) {
 			return null;
 		}
-		print_r("Checking for type on {$plugin}\n");
+//		print_r("Checking for type on {$plugin}\n");
 
 		// Remove back ticks
 		$plugin = str_replace('`', '', $plugin);
@@ -619,7 +619,7 @@ class DrillConnection {
 	 */
 	public function getColumns(string $plugin, string $schema, string $table_name, ?string $pluginType = null): array {
 
-		print_r("I got to Columns\n");
+//		print_r("I got to Columns\n");
 		if(! isset($pluginType)) {
 			$pluginType = $this->getPluginType($plugin);
 		}
@@ -693,7 +693,7 @@ class DrillConnection {
 	 */
 	public function getNestedTree(string $plugin, ...$pathItems): array {
 		$pluginType = $this->getPluginType($plugin);
-		print_r("Plugin Type: {$pluginType}\n");
+//		print_r("Plugin Type: {$pluginType}\n");
 
 		$itemCount = count($pathItems);
 
@@ -714,7 +714,7 @@ class DrillConnection {
 			throw new \Exception('Unsupported format');
 
 		} elseif($pluginType === 'jdbc') {
-			print_r("Filtered to JDBC\n");
+//			print_r("Filtered to JDBC\n");
 			if($itemCount < 1) {
 				$list = $this->getSchemaNames($plugin, true);
 				$results = [];
@@ -880,7 +880,7 @@ class DrillConnection {
 
 		if ($error = curl_error($ch)) {
 			curl_close($ch);
-			print_r('curl Error: ' . $error);
+//			print_r('curl Error: ' . $error);
 			throw new Error($error);
 		}
 
