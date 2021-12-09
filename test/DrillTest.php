@@ -2,6 +2,7 @@
 
 namespace thedataist\Drill;
 
+use Exception;
 use PHPUnit\Framework\TestCase;
 
 use thedataist\Drill\DrillConnection;
@@ -10,11 +11,11 @@ use thedataist\Drill\Result;
 
 class DrillTest extends TestCase {
 	
-	protected $host = '10.0.1.113';
-	protected $port = 8047;
+	protected $host = 'drill.dev.datadistillr.io';
+	protected $port = 443;
 	protected $username = '';
 	protected $password = '';
-	protected $ssl = false;
+	protected $ssl = true;
 	protected $row_limit = 10000;
 	
 	protected $drill = null;
@@ -26,17 +27,46 @@ class DrillTest extends TestCase {
 	}
 
 	public function testBadConnection() {
-		$this->baddrill = new DrillConnection($this->host, 8048);
-		$active = $this->baddrill->is_active();
-		$this->assertEquals(0, $active);
+		try {
+			$this->baddrill = new DrillConnection($this->host, 8048);
+			$active = $this->baddrill->is_active();
+		} catch(Exception $e) {
+			$active = false;
+		} finally {
+			$this->assertEquals(false, $active);
+		}
+
 	}
 
 	public function testQuery() {
+
 		$this->drill = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$result = $this->drill->query("SELECT * FROM cp.`employee.json` LIMIT 5");
+		$result = $this->drill->query('SELECT * FROM `cp`.`employee.json` LIMIT 7');
+
+
 		$this->assertEmpty($this->drill->error_message());
-		$fieldcount = $result->field_count();
-		$this->assertEquals(16, $fieldcount);
+
+		$fieldCount = $result->field_count();
+		$this->assertEquals(16, $fieldCount);
+	}
+
+	public function testPathsOnJDBC() {
+		$this->drill = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+
+		// Schema
+		$result = $this->drill->getNestedTree('mariadb');
+		$this->assertCount(7, $result);
+		print_r($result);
+
+		// Tables
+		$result = $this->drill->getNestedTree('mariadb', 'yelp');
+		$this->assertCount(4, $result);
+		print_r($result);
+
+		// Columns
+		$result = $this->drill->getNestedTree('mariadb', 'yelp', 'Users');
+		$this->assertCount(7, $result);
+		print_r($result);
 	}
 
 	public function testPlugins() {

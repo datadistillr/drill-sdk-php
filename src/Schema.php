@@ -27,7 +27,7 @@ class Schema {
 	 * List of tables in schema
 	 * @var array $tables
 	 */
-	public array $tables = array();
+	public array $tables = [];
 	// endregion
 
 	/**

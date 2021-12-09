@@ -2,6 +2,8 @@
 
 namespace thedataist\Drill;
 
+use stdClass;
+
 /**
  * @package Drill
  * @author Charles Givre <cgivre@thedataist.com>
@@ -85,11 +87,15 @@ class Result {
 	}
 
 	function fetch_object() {
+		return $this->fetch();
+	}
+
+	function fetch() {
 		if ($this->row_pointer >= count($this->rows)) {
 			return false;
 		} else {
 			$result = $this->rows[$this->row_pointer];
-			$result_object = new \stdClass();
+			$result_object = new stdClass();
 			foreach ($result as $key => $value) {
 				$result_object->$key = $value;
 			}
@@ -104,7 +110,7 @@ class Result {
 	 * @return array
 	 */
 	function fetch_columns(): array {
-		return $this->columns ? $this->columns : array();
+		return $this->columns ?? array();
 	}
 
 	/**
