@@ -265,7 +265,7 @@ class DrillConnection {
 	 * @return array List of disabled storage plugins, empty array if none
 	 */
 	function get_disabled_storage_plugins(): array {
-		$plugin_info = $this->get_storage_plugins();
+		$plugin_info = $this->getStoragePlugins();
 		$disabled_plugins = [];
 
 		foreach ($plugin_info as $plugin) {
@@ -303,7 +303,7 @@ class DrillConnection {
 		if (!$this->isActive()) {
 			return [];
 		}
-		$plugin_info = $this->get_storage_plugins();
+		$plugin_info = $this->getStoragePlugins();
 		$enabled_plugins = [];
 		foreach ($plugin_info as $plugin) {
 			if (isset($plugin['config']['enabled']) && $plugin['config']['enabled']) {
