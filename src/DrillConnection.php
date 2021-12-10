@@ -215,7 +215,7 @@ class DrillConnection {
 		// Should only be one row
 		$info = $this->query($query)->fetch();
 
-		if (! isset($info->TYPE)) {
+		if (! isset($info) || ! isset($info->TYPE)) {
 			return null;
 		}
 
