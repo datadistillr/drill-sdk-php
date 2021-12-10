@@ -4,7 +4,13 @@ namespace thedataist\Drill;
 
 use Error;
 use Exception;
-use phpDocumentor\Reflection\Project;
+use thedataist\Drill\Requst\PluginData;
+use thedataist\Drill\Requst\QueryData;
+use thedataist\Drill\Requst\RequestData;
+use thedataist\Drill\ResultSet\Column;
+use thedataist\Drill\ResultSet\Plugin;
+use thedataist\Drill\ResultSet\Schema;
+use thedataist\Drill\ResultSet\Table;
 
 /**
  * @package Drill
@@ -46,51 +52,53 @@ class DrillConnection {
 
 	/**
 	 * Error Messages
-	 * @var ?string $error_message
+	 * @var ?string $errorMessage
 	 */
-	protected ?string $error_message = null;
+	protected ?string $errorMessage = null;
 
 	/**
 	 * Columns
-	 * @var ?array $columns ;
+	 * @var ?Column[] $columns
+	 * @todo verify reasoning for this to be here.
 	 */
 	protected ?array $columns = null;
 
 	/**
 	 * Rows
 	 * @var ?array $rows
+	 * @todo verify reasoning for this to be here.
 	 */
 	protected ?array $rows = null;
 
 	/**
 	 * Cache of Plugins
-	 * @var ?array $cached_plugins
+	 * @var ?array $cachedPlugins
 	 */
-	protected ?array $cached_plugins = null;
+	protected ?array $cachedPlugins = null;
 
 	/**
 	 * Default schema
-	 * @var ?string $default_schema
+	 * @var ?string $defaultSchema
 	 */
-	protected ?string $default_schema = null;
+	protected ?string $defaultSchema = null;
 
 	/**
 	 * Row Limit
-	 * @var int $row_limit
+	 * @var int $rowLimit
 	 */
-	protected int $row_limit;
+	protected int $rowLimit;
 
 	/**
 	 * Cache of enabled plugins
-	 * @var ?array $cached_enabled_plugins
+	 * @var ?array $cachedEnabledPlugins
 	 */
-	protected ?array $cached_enabled_plugins = null;
+	protected ?array $cachedEnabledPlugins = null;
 
 	/**
 	 * Stack Trace
-	 * @var ?string|array $stack_trace
+	 * @var ?string|array $stackTrace
 	 */
-	protected $stack_trace;
+	protected $stackTrace;
 
 	// endregion
 	// region Constructor
@@ -99,20 +107,20 @@ class DrillConnection {
 	 * DrillConnection constructor.
 	 *
 	 * @param string $host Drill instance Hostname
-	 * @param int $arg_port Port Number
+	 * @param int $argPort Port Number
 	 * @param string $username Username [default: '']
 	 * @param string $password Password [default: '']
 	 * @param bool $ssl Use SSL/TLS Connection [default: false]
-	 * @param int $row_limit Row Limit [default: 10000]
+	 * @param int $rowLimit Row Limit [default: 10000]
 	 */
-	public function __construct(string $host, int $arg_port, string $username = '', string $password = '', bool $ssl = true, int $row_limit = 10000) {
+	public function __construct(string $host, int $argPort, string $username = '', string $password = '', bool $ssl = true, int $rowLimit = 10000) {
 		$this->hostname = $host;
-		$this->port = $arg_port;
+		$this->port = $argPort;
 		$this->username = $username;
 		$this->password = $password;
 		$this->ssl = $ssl;
-		$this->row_limit = $row_limit;
-//		$this->cached_enabled_plugins = $this->get_enabled_storage_plugins();
+		$this->rowLimit = $rowLimit;
+//		$this->cachedEnabledPlugins = $this->getEnabledStoragePlugins();
 	}
 
 	// endregion
@@ -130,14 +138,7 @@ class DrillConnection {
 
 		$url = $this->buildUrl('query');
 
-		$postData = [
-			'queryType' => 'SQL',
-			'query' => $query,
-			'autoLimit' => $this->row_limit,
-			'options' => [
-				'drill.exec.http.rest.errors.verbose' => true
-			]
-		];
+		$postData = new QueryData($query, $this->rowLimit);
 
 		try {
 			$response = $this->drillRequest($url, 'POST', $postData);
@@ -146,8 +147,8 @@ class DrillConnection {
 		}
 
 		if (isset($response['errorMessage'])) {
-			$this->error_message = $response['errorMessage'];
-			$this->stack_trace = $response['stackTrace'] ?? '';
+			$this->errorMessage = $response['errorMessage'];
+			$this->stackTrace = $response['stackTrace'] ?? '';
 			throw new Exception("Error in query: {$query}");
 		} else {
 			return new Result($response, $query);
@@ -165,7 +166,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function enablePlugin(string $plugin): bool {
-		$url = $this->buildUrl('enable_plugin', $plugin);
+		$url = $this->buildUrl('enablePlugin', $plugin);
 		$result = $this->drillRequest($url);
 
 		if (isset($result['result']) && $result['result'] === 'success') {
@@ -183,7 +184,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function disablePlugin(string $plugin): bool {
-		$url = $this->buildUrl('disable_plugin', $plugin);
+		$url = $this->buildUrl('disablePlugin', $plugin);
 		$result = $this->drillRequest($url);
 
 		if (isset($result['result']) && $result['result'] === 'success') {
@@ -205,7 +206,6 @@ class DrillConnection {
 		if (! isset($plugin) || ! $this->isActive()) {
 			return null;
 		}
-//		print_r("Checking for type on {$plugin}\n");
 
 		// Remove back ticks
 		$plugin = str_replace('`', '', $plugin);
@@ -215,7 +215,7 @@ class DrillConnection {
 		// Should only be one row
 		$info = $this->query($query)->fetch();
 
-		if (! isset($info)) {
+		if (! isset($info->TYPE)) {
 			return null;
 		}
 
@@ -227,22 +227,22 @@ class DrillConnection {
 	 *
 	 * @return array The list of all storage plugins, empty array if none
 	 */
-	function get_all_storage_plugins(): array {
-		$plugin_info = $this->get_storage_plugins();
-		$all_plugins = [];
-		$enabled_plugins = [];
+	function getAllStoragePlugins(): array {
+		$pluginInfo = $this->getStoragePlugins();
+		$allPlugins = [];
+		$enabledPlugins = [];
 
-		foreach ($plugin_info as $plugin) {
-			$all_plugins[] = $plugin['name'];
-			if ($plugin_info['config']['enabled'] == 1) {
-				$enabled_plugins[] = $plugin['name'];
+		foreach ($pluginInfo as $plugin) {
+			$allPlugins[] = $plugin['name'];
+			if ($pluginInfo['config']['enabled'] == 1) {
+				$enabledPlugins[] = $plugin['name'];
 			}
 		}
 
-		$this->cached_plugins = $all_plugins;
-		$this->cached_enabled_plugins = $enabled_plugins;
+		$this->cachedPlugins = $allPlugins;
+		$this->cachedEnabledPlugins = $enabledPlugins;
 
-		return $all_plugins;
+		return $allPlugins;
 	}
 
 	/**
@@ -264,17 +264,17 @@ class DrillConnection {
 	 *
 	 * @return array List of disabled storage plugins, empty array if none
 	 */
-	function get_disabled_storage_plugins(): array {
-		$plugin_info = $this->getStoragePlugins();
-		$disabled_plugins = [];
+	function getDisabledStoragePlugins(): array {
+		$pluginInfo = $this->getStoragePlugins();
+		$disabledPlugins = [];
 
-		foreach ($plugin_info as $plugin) {
+		foreach ($pluginInfo as $plugin) {
 			if ($plugin['config']['enabled'] == 0) {
-				$disabled_plugins[] = $plugin['name'];
+				$disabledPlugins[] = $plugin['name'];
 			}
 		}
 
-		return $disabled_plugins;
+		return $disabledPlugins;
 	}
 
 	/**
@@ -284,13 +284,13 @@ class DrillConnection {
 	 *
 	 * @return array The list storage plugins as an associative array, empty array if none.
 	 */
-	function get_cached_enabled_plugins(): array {
+	function getCachedEnabledPlugins(): array {
 
-		if (!isset($this->cached_enabled_plugins)) {
-			$this->cached_enabled_plugins = $this->get_enabled_storage_plugins();
+		if (!isset($this->cachedEnabledPlugins)) {
+			$this->cachedEnabledPlugins = $this->getEnabledStoragePlugins();
 		}
 
-		return $this->cached_enabled_plugins;
+		return $this->cachedEnabledPlugins;
 	}
 
 	/**
@@ -299,19 +299,19 @@ class DrillConnection {
 	 * @return array A list of enabled storage plugins. Empty array if none.
 	 * @throws Exception
 	 */
-	public function get_enabled_storage_plugins(): array {
+	public function getEnabledStoragePlugins(): array {
 		if (!$this->isActive()) {
 			return [];
 		}
-		$plugin_info = $this->getStoragePlugins();
-		$enabled_plugins = [];
-		foreach ($plugin_info as $plugin) {
+		$pluginInfo = $this->getStoragePlugins();
+		$enabledPlugins = [];
+		foreach ($pluginInfo as $plugin) {
 			if (isset($plugin['config']['enabled']) && $plugin['config']['enabled']) {
-				$enabled_plugins[] = $plugin;
+				$enabledPlugins[] = $plugin;
 			}
 		}
-		$this->cached_enabled_plugins = $enabled_plugins;
-		return $enabled_plugins;
+		$this->cachedEnabledPlugins = $enabledPlugins;
+		return $enabledPlugins;
 	}
 
 	/**
@@ -334,13 +334,13 @@ class DrillConnection {
 	 *
 	 * @return array The list storage plugins as an associative array, empty array if none.
 	 */
-	function get_cached_plugins(): array {
+	function getCachedPlugins(): array {
 
-		if (!isset($this->cached_plugins)) {
-			$this->cached_plugins = $this->getStoragePlugins();
+		if (!isset($this->cachedPlugins)) {
+			$this->cachedPlugins = $this->getStoragePlugins();
 		}
 
-		return $this->cached_plugins;
+		return $this->cachedPlugins;
 	}
 
 	/**
@@ -351,7 +351,7 @@ class DrillConnection {
 	 * @return array Array containing all configuration options for the given plugin
 	 * @throws Exception
 	 */
-	function get_storage_plugin_info(string $plugin): array {
+	function getStoragePluginInfo(string $plugin): array {
 
 		$url = $this->buildUrl('plugin-info', $plugin);
 
@@ -361,26 +361,23 @@ class DrillConnection {
 	/**
 	 * Save Storage Plugin. Creates or edits a storage plugin.
 	 *
-	 * @param string $plugin_name Storage Plugin Name
+	 * @param string $pluginName Storage Plugin Name
 	 * @param array $config Config
 	 * @return bool|null
 	 * @throws Exception
 	 */
-	public function save_storage_plugin(string $plugin_name, array $config): ?bool {
-		$url = $this->buildUrl('plugin-info', $plugin_name);
+	public function saveStoragePlugin(string $pluginName, array $config): ?bool {
+		$url = $this->buildUrl('plugin-info', $pluginName);
 
-		$postData = [
-			'name' => $plugin_name,
-			'config' => $config
-		];
+		$postData = new PluginData($pluginName, $config);
 
 		$response = $this->drillRequest($url, 'POST', $postData);
 
 		if (isset($response['errorMessage'])
 			|| isset($response['result']) && strtolower($response['result']) !== 'success'
 			|| !isset($response['result'])) {
-			$this->error_message = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
-			$this->stack_trace = $response['stackTrace'] ?? '';
+			$this->errorMessage = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
+			$this->stackTrace = $response['stackTrace'] ?? '';
 			throw new Exception("Unable to save storage plugin: " . print_r($config, true));
 		} else {
 			return true;
@@ -390,20 +387,20 @@ class DrillConnection {
 	/**
 	 * Delete Storage Plugin
 	 *
-	 * @param string $plugin_name Storage Plugin Name
+	 * @param string $pluginName Storage Plugin Name
 	 * @return bool|null
 	 * @throws Exception
 	 */
-	public function delete_storage_plugin(string $plugin_name): ?bool {
-		$url = $this->buildUrl('plugin-info', $plugin_name);
+	public function deleteStoragePlugin(string $pluginName): ?bool {
+		$url = $this->buildUrl('plugin-info', $pluginName);
 
 		$response = $this->drillRequest($url, 'DELETE');
 
 		if (isset($response['errorMessage'])
 			|| isset($response['result']) && strtolower($response['result']) !== 'success'
 			|| !isset($response['result'])) {
-			$this->error_message = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
-			$this->stack_trace = $response['stackTrace'] ?? '';
+			$this->errorMessage = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
+			$this->stackTrace = $response['stackTrace'] ?? '';
 			throw new Exception("Unable to delete storage plugin.");
 		} else {
 			return true;
@@ -432,15 +429,15 @@ class DrillConnection {
 			$query .= " WHERE `SCHEMA_NAME` LIKE '{$plugin}.%'";
 		}
 
-		$raw_results = $this->query($query)->fetch_all();
-		if (!$raw_results) {
-			$this->error_message = 'Error retrieving schema names';
+		$rawResults = $this->query($query)->getRows();
+		if (!$rawResults) {
+			$this->errorMessage = 'Error retrieving schema names';
 			return null;
 		}
 
 		$schemata = [];
 		// TODO: strip tables as well.
-		foreach ($raw_results as $result) {
+		foreach ($rawResults as $result) {
 			$schema = $result['SCHEMA_NAME'];
 			if ($schema != 'cp.default' &&
 				$schema != 'INFORMATION_SCHEMA' &&
@@ -546,7 +543,7 @@ class DrillConnection {
 
 		if ($pluginType === 'file') {
 			$sql = "SELECT `FILE_NAME` FROM `INFORMATION_SCHEMA`.`files` WHERE `SCHEMA_NAME` = '{$cleanSchema}' AND `IS_FILE` = true";
-			$tables = $this->query($sql)->fetch_all();
+			$tables = $this->query($sql)->getRows();
 
 			foreach ($tables as $table) {
 				if (strpos($table['FILE_NAME'], 'view.drill')) {
@@ -558,7 +555,7 @@ class DrillConnection {
 			}
 		} else {
 			$sql = "SELECT `TABLE_NAME` FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_SCHEMA` = '{$cleanSchema}'";
-			$tables = $this->query($sql)->fetch_all();
+			$tables = $this->query($sql)->getRows();
 
 			foreach ($tables as $table) {
 				if (strpos($table['TABLE_NAME'], 'view.drill')) {
@@ -587,14 +584,14 @@ class DrillConnection {
 			return null;
 		}
 
-		$view_names = [];
+		$viewNames = [];
 		$sql = "SELECT `TABLE_NAME` FROM INFORMATION_SCHEMA.views WHERE `table_schema`='{$plugin}.{$schema}'";
-		$results = $this->query($sql)->fetch_all();
+		$results = $this->query($sql)->getRows();
 
 		foreach ($results as $result) {
-			$view_names[] = $result['TABLE_NAME'];
+			$viewNames[] = $result['TABLE_NAME'];
 		}
-		return $view_names;
+		return $viewNames;
 	}
 
 	// endregion
@@ -611,20 +608,19 @@ class DrillConnection {
 	 *
 	 * @param string $plugin The plugin name
 	 * @param string $schema The schema name
-	 * @param string $table_name The table or file name
+	 * @param string $tableName The table or file name
 	 * @param ?string $pluginType Plugin Type [default: null]
 	 *
 	 * @return Column[] List of columns present
 	 * @throws Exception
 	 */
-	public function getColumns(string $plugin, string $schema, string $table_name, ?string $pluginType = null): array {
+	public function getColumns(string $plugin, string $schema, string $tableName, ?string $pluginType = null): array {
 
-//		print_r("I got to Columns\n");
 		if(! isset($pluginType)) {
 			$pluginType = $this->getPluginType($plugin);
 		}
 
-		$filePath = "{$plugin}.{$schema}.{$table_name}";
+		$filePath = "{$plugin}.{$schema}.{$tableName}";
 
 		// Since MongoDB uses the ** notation, bypass that and query the data directly
 		// TODO: Add API functionality here as well
@@ -633,43 +629,43 @@ class DrillConnection {
 			$views = $this->getViewNames($plugin, $schema);
 
 			if ($pluginType === 'mongo' || $pluginType === 'splunk') {
-				$quoted_file_name = $this->formatDrillTable($filePath, false);
-				$sql = "SELECT * FROM {$quoted_file_name} LIMIT 1";
-			} else if (in_array($table_name, $views)) {
-				$view_name = "`{$plugin}.{$schema}`.`{$table_name}`"; // NOTE: escape char ` may need to go around plugin and schema separately
-				$sql = "SELECT * FROM {$view_name} LIMIT 1";
+				$quotedFileName = $this->formatDrillTable($filePath, false);
+				$sql = "SELECT * FROM {$quotedFileName} LIMIT 1";
+			} else if (in_array($tableName, $views)) {
+				$viewName = "`{$plugin}.{$schema}`.`{$tableName}`"; // NOTE: escape char ` may need to go around plugin and schema separately
+				$sql = "SELECT * FROM {$viewName} LIMIT 1";
 			} else {
-				$quoted_file_name = $this->formatDrillTable($filePath, true);
-				$sql = "SELECT * FROM {$quoted_file_name} LIMIT 1";
+				$quotedFileName = $this->formatDrillTable($filePath, true);
+				$sql = "SELECT * FROM {$quotedFileName} LIMIT 1";
 			}
 
 			// TODO: process this to return Column[]
-			return $this->query($sql)->get_schema();
+			return $this->query($sql)->getSchema();
 
 //		} else if (str_contains($table_name, "SELECT")) { // replaced with regex, str_contains is >=PHP8.0
-		} else if (preg_match('/SELECT/', $table_name)) {
+		} else if (preg_match('/SELECT/', $tableName)) {
 
-			$sql = "SELECT * FROM {$table_name} LIMIT 1";
+			$sql = "SELECT * FROM {$tableName} LIMIT 1";
 
 		} else {
 			/*
 			 * Case for everything else.
 			 */
-			$quoted_schema = $this->formatDrillTable($filePath, false);
-			$sql = "DESCRIBE {$quoted_schema}";
+			$quotedSchema = $this->formatDrillTable($filePath, false);
+			$sql = "DESCRIBE {$quotedSchema}";
 		}
 
-		$result = $this->query($sql)->fetch_all();
+		$result = $this->query($sql)->getRows();
 
 		$columns = [];
 		foreach ($result as $row) {
 			$data = [
 				'plugin' => $plugin,
 				'schema' => $schema,
-				'table' => $table_name,
+				'table' => $tableName,
 				'name' => $row['COLUMN_NAME'],
-				'data_type' => $row['DATA_TYPE'],
-				'is_nullable' => $row['IS_NULLABLE']
+				'dataType' => $row['DATA_TYPE'],
+				'isNullable' => $row['IS_NULLABLE']
 			];
 
 			$columns[] = new Column($data);
@@ -693,7 +689,6 @@ class DrillConnection {
 	 */
 	public function getNestedTree(string $plugin, ...$pathItems): array {
 		$pluginType = $this->getPluginType($plugin);
-//		print_r("Plugin Type: {$pluginType}\n");
 
 		$itemCount = count($pathItems);
 
@@ -714,7 +709,7 @@ class DrillConnection {
 			throw new \Exception('Unsupported format');
 
 		} elseif($pluginType === 'jdbc') {
-//			print_r("Filtered to JDBC\n");
+
 			if($itemCount < 1) {
 				$list = $this->getSchemaNames($plugin, true);
 				$results = [];
@@ -793,8 +788,8 @@ class DrillConnection {
 	 *
 	 * @return string The error message from the most recent query, an empty string if undefined.
 	 */
-	public function error_message(): string {
-		return $this->error_message ?? '';
+	public function errorMessage(): string {
+		return $this->errorMessage ?? '';
 	}
 
 	// endregion
@@ -822,10 +817,10 @@ class DrillConnection {
 			case 'plugin-info':
 				$path = '/storage/' . $extra . '.json';
 				break;
-			case 'enable_plugin':
+			case 'enablePlugin':
 				$path = '/storage/' . $extra . '/enable/true';
 				break;
-			case 'disable_plugin':
+			case 'disablePlugin':
 				$path = '/storage/' . $extra . '/enable/false';
 				break;
 			default:
@@ -841,13 +836,13 @@ class DrillConnection {
 	 * @param string $url Request Endpoint URL
 	 * @param string $requestType HTTP Request type [default: GET]
 	 *    Options GET, DELETE, POST
-	 * @param ?array $postData Post Data [default: null]
+	 * @param ?RequestData $postData Post Data [default: null]
 	 * @return array
 	 *
 	 * @throws Error
 	 * @throws Exception
 	 */
-	private function drillRequest(string $url, string $requestType = 'GET', ?array $postData = null): array {
+	private function drillRequest(string $url, string $requestType = 'GET', ?RequestData $postData = null): array {
 
 		$curlOptions = [
 			CURLOPT_CUSTOMREQUEST => $requestType
@@ -880,7 +875,7 @@ class DrillConnection {
 
 		if ($error = curl_error($ch)) {
 			curl_close($ch);
-//			print_r('curl Error: ' . $error);
+
 			throw new Error($error);
 		}
 
@@ -921,6 +916,99 @@ class DrillConnection {
 	 */
 	function get_plugin_type(?string $plugin): ?string {
 		return $this->getPluginType($plugin);
+	}
+
+	/**
+	 * This function returns an array of all storage plugins.
+	 *
+	 * @return array The list of all storage plugins, empty array if none
+	 * @deprecated v0.5.7 use getAllStoragePlugins()
+	 */
+	function get_all_storage_plugins(): array {
+		return $this->getAllStoragePlugins();
+	}
+
+	/**
+	 * Retrieves a list of storage plugins which are disabled.
+	 *
+	 * @return array List of disabled storage plugins, empty array if none
+	 * @deprecated v0.5.7 use getDisabledStoragePlugins()
+	 */
+	function get_disabled_storage_plugins(): array {
+		return $this->getDisabledStoragePlugins();
+	}
+
+	/**
+	 * Retrieves the cached list of enabled plugins.
+	 *
+	 * Theoretically you can reduce API calls with this method.
+	 *
+	 * @return array The list storage plugins as an associative array, empty array if none.
+	 * @deprecated v0.5.7 use getCachedEnabledPlugins()
+	 */
+	function get_cached_enabled_plugins(): array {
+		return $this->getCachedEnabledPlugins();
+	}
+
+	/**
+	 * Retrieves a list of enabled storage plugins.
+	 *
+	 * @return array A list of enabled storage plugins. Empty array if none.
+	 * @throws Exception
+	 * @deprecated v0.5.7 use getEnabledStoragePlugins()
+	 */
+	public function get_enabled_storage_plugins(): array {
+		return $this->getEnabledStoragePlugins();
+	}
+
+	/**
+	 * This function returns an array of configuration options for a given storage plugin.
+	 *
+	 * @param string $plugin The plain text name of the storage plugin.
+	 *
+	 * @return array Array containing all configuration options for the given plugin
+	 * @throws Exception
+	 * @deprecated v0.5.7 use getStoragePluginInfo()
+	 */
+	function get_storage_plugin_info(string $plugin): array {
+		return $this->getStoragePluginInfo($plugin);
+	}
+
+	/**
+	 * Save Storage Plugin. Creates or edits a storage plugin.
+	 *
+	 * @param string $plugin_name Storage Plugin Name
+	 * @param array $config Config
+	 * @return bool|null
+	 * @throws Exception
+	 * @deprecated v0.5.7 use saveStoragePlugin()
+	 */
+	public function save_storage_plugin(string $plugin_name, array $config): ?bool {
+		return $this->saveStoragePlugin($plugin_name, $config);
+	}
+
+	/**
+	 * Delete Storage Plugin
+	 *
+	 * @param string $plugin_name Storage Plugin Name
+	 * @return bool|null
+	 * @throws Exception
+	 * @deprecated v0.5.7 use deleteStoragePlugin()
+	 */
+	public function delete_storage_plugin(string $plugin_name): ?bool {
+		return $this->deleteStoragePlugin($plugin_name);
+	}
+
+	/**
+	 * Retrieves the cached list of plugins.
+	 *
+	 * Theoretically you can reduce API calls with this method.
+	 *
+	 * @return array The list storage plugins as an associative array, empty array if none.
+	 * @deprecated v0.5.7 use getCachedPlugins()
+	 */
+	function get_cached_plugins(): array {
+		return $this->getCachedPlugins();
 	}
 
 	/**
@@ -1097,6 +1185,16 @@ class DrillConnection {
 	 */
 	function get_storage_plugins(): array {
 		return $this->getStoragePlugins();
+	}
+
+	/**
+	 * Retrieves the error message from the most recent query.
+	 *
+	 * @return string The error message from the most recent query, an empty string if undefined.
+	 * @deprecated v0.5.7 use errorMessage()
+	 */
+	public function error_message(): string {
+		return $this->errorMessage();
 	}
 	// endregion
 }

@@ -7,14 +7,54 @@ use stdClass;
 /**
  * @package Drill
  * @author Charles Givre <cgivre@thedataist.com>
+ * @author Tim Swagger <tim@datadistillr.com>
+ *
+ * @since 0.6.0 Updated method/variable names to use camelCase
  */
 class Result {
-	protected $columns;
-	protected $rows;
-	protected $query;
-	protected $row_pointer;
-	protected $metadata;
-	protected $schema = array();
+	// region Properties
+
+	/**
+	 * Column Array
+	 * @var array $columns
+	 */
+	protected array $columns;
+
+	/**
+	 * Results Rows
+	 * @var array $rows
+	 */
+	protected array $rows;
+
+	/**
+	 * Query String
+	 * @var string $query
+	 */
+	protected string $query;
+
+	/**
+	 * Row Pointer
+	 *
+	 * @todo expand this definition
+	 * @var int $rowPointer
+	 */
+	protected int $rowPointer;
+
+	/**
+	 * Meta Data
+	 * @var string[] $metadata
+	 */
+	protected array $metadata;
+
+	/**
+	 * Schema List
+	 * @var array
+	 * @todo identify actual datatype
+	 */
+	protected array $schema = [];
+
+	// endregion
+	// region Static Functions
 
 	/**
 	 * Cleans the data types and specifically removes precision information
@@ -24,38 +64,46 @@ class Result {
 	 *
 	 * @return string The datatype without precision information
 	 */
-	static function clean_data_type_name(string $dataType): string {
+	static public function cleanDataTypeName(string $dataType): string {
 		$pattern = "/[a-zA-Z]+\(\d+(,\s*\d+)?\)/";
 		if (preg_match($pattern, $dataType)) {
 			$parts = explode('(', $dataType);
-			$clean_data_type = $parts[0];
+			$cleanDataType = $parts[0];
 		} else {
-			$clean_data_type = $dataType;
+			$cleanDataType = $dataType;
 		}
 
-		return $clean_data_type;
+		return $cleanDataType;
 	}
+
+	// endregion
+	// region Constructor
 
 	/**
 	 * Result constructor.
 	 *
-	 * @param $response
-	 * @param $query
+	 * @param array $response Response Data from Drill Query
+	 * @param string $query Query String
+	 * @todo review if response should be sent as an array or object
 	 */
-	function __construct($response, $query) {
-		$this->columns = isset($response['columns']) ? $response['columns'] : array();
-		$this->rows = isset($response['rows']) ? $response['rows'] : array();
-		$this->metadata = isset($response['metadata']) ? $response['metadata'] : array();
+	public function __construct(array $response, string $query) {
+		$this->columns = $response['columns'] ?? [];
+		$this->rows = $response['rows'] ?? [];
+		$this->metadata = $response['metadata'] ?? [];
 		$this->query = $query;
-		$this->row_pointer = 0;
+		$this->rowPointer = 0;
 
 		for ($i = 0; $i < count($this->columns); $i++) {
-			$info = [];
-			$info['column'] = $this->columns[$i];
-			$info['data_type'] = self::clean_data_type_name($this->metadata[$i]);
-			array_push($this->schema, $info);
+			$info = [
+				'column' => $this->columns[$i],
+				'data_type' => self::cleanDataTypeName($this->metadata[$i])
+			];
+			$this->schema[] = $info;
 		}
 	}
+
+	// endregion
+	// region Primary Class Methods
 
 	function data_seek($n) {
 		if (!is_int($n)) {
@@ -63,44 +111,70 @@ class Result {
 		} elseif ($n > count($this->rows)) {
 			return false;
 		} else {
-			$this->row_pointer = $n;
+			$this->rowPointer = $n;
 			return true;
 		}
 	}
 
-	function fetch_all() {
-		return $this->rows;
-	}
-
-	function fetch_assoc() {
-		if ($this->row_pointer >= count($this->rows)) {
-			return false;
+	/**
+	 * Fetch results as an associative array
+	 *
+	 * @return array
+	 */
+	public function fetchAssoc(): array {
+		if ($this->rowPointer >= count($this->rows)) {
+			return [];
 		} else {
-			$result = $this->rows[$this->row_pointer];
-			$this->row_pointer++;
+			$result = $this->rows[$this->rowPointer];
+			$this->rowPointer++;
 			return $result;
 		}
 	}
 
-	function get_schema() {
+	/**
+	 * Retrieve Schema Array
+	 *
+	 * @return array
+	 */
+	public function getSchema(): array {
 		return $this->schema;
 	}
 
-	function fetch_object() {
+	/**
+	 * Retrieve Data Rows
+	 *
+	 * @return array
+	 */
+	public function getRows(): array {
+		return $this->rows;
+	}
+
+	/**
+	 * Alias to fetch method
+	 *
+	 * @see fetch()
+	 * @return ?stdClass
+	 */
+	public function fetchObject(): ?stdClass {
 		return $this->fetch();
 	}
 
-	function fetch() {
-		if ($this->row_pointer >= count($this->rows)) {
-			return false;
+	/**
+	 * Fetch Results
+	 *
+	 * @return ?stdClass
+	 */
+	function fetch(): ?stdClass {
+		if ($this->rowPointer >= count($this->rows)) {
+			return null;
 		} else {
-			$result = $this->rows[$this->row_pointer];
-			$result_object = new stdClass();
+			$result = $this->rows[$this->rowPointer];
+			$resultObject = new stdClass();
 			foreach ($result as $key => $value) {
-				$result_object->$key = $value;
+				$resultObject->$key = $value;
 			}
-			$this->row_pointer++;
-			return $result_object;
+			$this->rowPointer++;
+			return $resultObject;
 		}
 	}
 
@@ -109,8 +183,8 @@ class Result {
 	 *
 	 * @return array
 	 */
-	function fetch_columns(): array {
-		return $this->columns ?? array();
+	function getColumns(): array {
+		return $this->columns ?? [];
 	}
 
 	/**
@@ -118,12 +192,17 @@ class Result {
 	 *
 	 * @return int Number of fields
 	 */
-	function field_count(): int {
+	function fieldCount(): int {
 		return count($this->columns);
 	}
 
-	function more_results() {
-		return $this->row_pointer < count($this->rows);
+	/**
+	 * Check if there are results beyond the current row index
+	 *
+	 * @return bool
+	 */
+	public function hasMoreResults(): bool {
+		return $this->rowPointer < count($this->rows);
 	}
 
 	/**
@@ -131,7 +210,107 @@ class Result {
 	 *
 	 * @return int Number of Rows
 	 */
-	function num_rows(): int {
+	function numRows(): int {
 		return count($this->rows);
 	}
+
+	// endregion
+	// region Deprecated Methods
+
+	/**
+	 * Cleans the data types and specifically removes precision information
+	 * from VARCHAR and DECIMAL data types which is not useful for UI work.
+	 *
+	 * @param string $dataType The string data type which should be a Drill MinorType
+	 *
+	 * @return string The datatype without precision information
+	 * @deprecated v0.6.0 use cleanDataTypeName()
+	 */
+	static function clean_data_type_name(string $dataType): string {
+		return self::cleanDataTypeName($dataType);
+	}
+
+
+	/**
+	 * Return Schema
+	 *
+	 * @return array
+	 * @deprecated v0.6.0 use getSchema()
+	 */
+	function get_schema() {
+		return $this->getSchema();
+	}
+
+	/**
+	 * Fetch Associative Array
+	 *
+	 * @return array
+	 * @deprecated v0.6.0 use fetchAssoc()
+	 */
+	function fetch_assoc(): array {
+		return $this->fetchAssoc();
+	}
+
+	/**
+	 * Alias to fetch method
+	 *
+	 * @see fetch()
+	 * @return ?stdClass
+	 * @deprecated v0.6.0 use fetchAssoc()
+	 */
+	function fetch_object(): ?stdClass {
+		return $this->fetchObject();
+	}
+
+	/**
+	 * Fetch all rows
+	 *
+	 * @return array
+	 * @deprecated v0.6.0 use getRows()
+	 */
+	function fetch_all(): array {
+		return $this->getRows();
+	}
+
+	/**
+	 * Fetch column names from results
+	 *
+	 * @return array
+	 * @deprecated v0.6.0 use getColumns()
+	 */
+	function fetch_columns(): array {
+		return $this->getColumns();
+	}
+
+	/**
+	 * Get number of fields
+	 *
+	 * @return int Number of fields
+	 * @deprecated v0.6.0 use fieldCount()
+	 */
+	function field_count(): int {
+		return $this->fieldCount();
+	}
+
+	/**
+	 * Retrieve the number of resulting rows
+	 *
+	 * @return int Number of Rows
+	 * @deprecated v0.6.0 use numRows()
+	 */
+	function num_rows(): int {
+		return $this->numRows();
+	}
+
+	/**
+	 * Check if there are results beyond the current row index
+	 *
+	 * @return bool
+	 * @deprecated v0.6.0 use hasMoreResults()
+	 */
+	function more_results() {
+		return $this->hasMoreResults();
+	}
+
+	// endregion
 }
