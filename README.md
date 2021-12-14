@@ -9,7 +9,7 @@ This library allows you to connect to and query Apache Drill programmatically.  
 mysql interface, so if you are familiar with that, you already pretty much know how to use the Drill connector.
 
 ## Installing the Library
-The libarary can be installed using [Composer](https://getcomposer.org) by using the following command:
+This library can be installed using [Composer](https://getcomposer.org) by using the following command:
 ```
 composer require "datadistillr/drill-sdk-php:^0.6.0"
 ```
