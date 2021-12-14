@@ -14,7 +14,7 @@ The libarary can be installed using [Composer](https://getcomposer.org) by using
 composer require "datadistillr/drill-sdk-php:^0.6.0"
 ```
 
-The current pre-release version is: `0.6.0`
+The current pre-release version is: `0.6.1`
 
 ## Using the Connector
 The first step is to make a Drill connection handle.  The module uses Drill's RESTful interface, so it will not
