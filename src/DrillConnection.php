@@ -13,7 +13,8 @@ use datadistillr\Drill\ResultSet\Schema;
 use datadistillr\Drill\ResultSet\Table;
 
 /**
- * @package Drill
+ * @package datadistillr\drill-sdk-php
+ *
  * @author Charles Givre <cgivre@thedataist.com>
  * @author Tim Swagger <tim@datadistillr.com>
  */
@@ -335,13 +336,22 @@ class DrillConnection {
 	 *
 	 * @return array The list storage plugins as an associative array, empty array if none.
 	 */
-	function getCachedPlugins(): array {
+	public function getCachedPlugins(): array {
 
 		if (!isset($this->cachedPlugins)) {
 			$this->cachedPlugins = $this->getStoragePlugins();
 		}
 
 		return $this->cachedPlugins;
+	}
+
+	/**
+	 * Retrieve Stack Trace
+	 *
+	 * @return ?array Array of Stack Trace Results
+	 */
+	public function getStackTrace(): ?array {
+		return $this->stackTrace;
 	}
 
 	/**
