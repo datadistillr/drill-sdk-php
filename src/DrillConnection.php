@@ -1,16 +1,16 @@
 <?php
 
-namespace thedataist\Drill;
+namespace datadistillr\Drill;
 
 use Error;
 use Exception;
-use thedataist\Drill\Requst\PluginData;
-use thedataist\Drill\Requst\QueryData;
-use thedataist\Drill\Requst\RequestData;
-use thedataist\Drill\ResultSet\Column;
-use thedataist\Drill\ResultSet\Plugin;
-use thedataist\Drill\ResultSet\Schema;
-use thedataist\Drill\ResultSet\Table;
+use datadistillr\Drill\Request\PluginData;
+use datadistillr\Drill\Request\QueryData;
+use datadistillr\Drill\Request\RequestData;
+use datadistillr\Drill\ResultSet\Column;
+use datadistillr\Drill\ResultSet\Plugin;
+use datadistillr\Drill\ResultSet\Schema;
+use datadistillr\Drill\ResultSet\Table;
 
 /**
  * @package Drill
@@ -201,6 +201,7 @@ class DrillConnection {
 	 *
 	 * @return ?string The plugin type, or null on error
 	 * @throws Exception
+	 * @todo This does not always return the plugin type.  Need better query
 	 */
 	public function getPluginType(?string $plugin): ?string {
 		if (! isset($plugin) || ! $this->isActive()) {

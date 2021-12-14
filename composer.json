@@ -1,8 +1,10 @@
 {
-    "name": "thedataist/drill-connector",
-    "description": "Objects that allow you to programmatically connect to Apache Drill.",
+    "name": "datadistillr/drill-sdk-php",
+    "description": "PHP SDK for programmatically connecting to Apache Drill.",
     "keywords": [
         "Drill",
+        "DataDistillr",
+        "DataDistiller",
         "database",
         "data exploration",
         "data analysis",
@@ -12,9 +14,13 @@
         "Data Science",
         "SQL"
     ],
-    "homepage": "http://thedataist.com",
+    "homepage": "https://datadistillr.com",
     "license": "Apache-2.0",
     "authors" : [
+        {
+            "name": "Tim Swagger",
+            "email": "tim@datadistillr.com"
+        },
         {
             "name": "Charles Givre",
             "email": "cgivre@thedataist.com"
@@ -25,11 +31,11 @@
     },
     "repositories" : [{
       "type": "vcs",
-      "url": "https://github.com/cgivre/drill-php"
+      "url": "https://github.com/datadistillr/drill-php"
       }
     ],
     "autoload": {
-      "psr-4": { "thedataist\\Drill\\": "src/" },
+      "psr-4": { "datadistillr\\Drill\\": "src/" },
       "classmap": ["src/"]
     },
     "require": {

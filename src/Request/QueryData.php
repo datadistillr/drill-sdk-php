@@ -1,6 +1,6 @@
 <?php
 
-namespace thedataist\Drill\Requst;
+namespace datadistillr\Drill\Request;
 
 /**
  * Query Data POST request object

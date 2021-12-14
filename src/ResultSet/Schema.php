@@ -1,7 +1,6 @@
 <?php
 
-
-namespace thedataist\Drill\ResultSet;
+namespace datadistillr\Drill\ResultSet;
 
 /**
  * Class Schema

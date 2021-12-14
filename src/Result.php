@@ -1,6 +1,6 @@
 <?php
 
-namespace thedataist\Drill;
+namespace datadistillr\Drill;
 
 use stdClass;
 
@@ -135,6 +135,7 @@ class Result {
 	 * Retrieve Schema Array
 	 *
 	 * @return array
+	 * @todo possibly move this to another location
 	 */
 	public function getSchema(): array {
 		return $this->schema;
@@ -144,9 +145,20 @@ class Result {
 	 * Retrieve Data Rows
 	 *
 	 * @return array
+	 * @todo possibly move this to another location
 	 */
 	public function getRows(): array {
 		return $this->rows;
+	}
+
+	/**
+	 * Fetch column names from results
+	 *
+	 * @return array
+	 * @todo possibly move this to another location
+	 */
+	function getColumns(): array {
+		return $this->columns ?? [];
 	}
 
 	/**
@@ -176,15 +188,6 @@ class Result {
 			$this->rowPointer++;
 			return $resultObject;
 		}
-	}
-
-	/**
-	 * Fetch column names from results
-	 *
-	 * @return array
-	 */
-	function getColumns(): array {
-		return $this->columns ?? [];
 	}
 
 	/**
