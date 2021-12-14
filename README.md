@@ -1,7 +1,7 @@
-[![Php_version](https://img.shields.io/packagist/php-v/datadistillr/drill-sdk-php.svg)](https://packagist.org/packages/datadistillr/drill-sdk-php)
-[![Package version](https://img.shields.io/packagist/v/datadistillr/drill-sdk-php.svg?include_prereleases&style=flat-square)](https://packagist.org/packages/datadistillr/drill-sdk-php)
-[![Slack](https://img.shields.io/badge/slack-%23datadistillrcommunity-blue.svg?style=flat-square)](https://symfony.com/slack-invite)
-[![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
+[![Php_version](https://img.shields.io/packagist/php-v/datadistillr/drill-sdk-php?logo=php&logoColor=ffffff)](https://packagist.org/packages/datadistillr/drill-sdk-php)
+[![Package version](https://img.shields.io/packagist/v/datadistillr/drill-sdk-php?include_prereleases&logo=packagist&logoColor=ffffff)](https://packagist.org/packages/datadistillr/drill-sdk-php)
+[![Slack](https://img.shields.io/badge/slack-%23datadistillrcommunity-blue?logo=slack&logoColor=ffffff)](https://symfony.com/slack-invite)
+[![License](https://img.shields.io/packagist/l/datadistillr/drill-sdk-php?logo=apache&logoColor=ffffff)](LICENSE)
 
 # PHP SDK Library for Connecting to Apache Drill.
 

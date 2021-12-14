@@ -335,13 +335,22 @@ class DrillConnection {
 	 *
 	 * @return array The list storage plugins as an associative array, empty array if none.
 	 */
-	function getCachedPlugins(): array {
+	public function getCachedPlugins(): array {
 
 		if (!isset($this->cachedPlugins)) {
 			$this->cachedPlugins = $this->getStoragePlugins();
 		}
 
 		return $this->cachedPlugins;
+	}
+
+	/**
+	 * Retrieve Stack Trace
+	 *
+	 * @return ?array Array of Stack Trace Results
+	 */
+	public function getStackTrace(): ?array {
+		return $this->stackTrace;
 	}
 
 	/**
