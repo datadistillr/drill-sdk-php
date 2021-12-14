@@ -1,3 +1,8 @@
+[![Php_version](https://img.shields.io/packagist/php-v/datadistillr/drill-sdk-php.svg)](https://packagist.org/packages/datadistillr/drill-sdk-php)
+[![Package version](https://img.shields.io/packagist/v/datadistillr/drill-sdk-php.svg?include_prereleases&style=flat-square)](https://packagist.org/packages/datadistillr/drill-sdk-php)
+[![Slack](https://img.shields.io/badge/slack-%23datadistillrcommunity-blue.svg?style=flat-square)](https://symfony.com/slack-invite)
+[![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
+
 # PHP SDK Library for Connecting to Apache Drill.
 
 This library allows you to connect to and query Apache Drill programmatically.  It is loosely modeled after PHP's
@@ -32,14 +37,14 @@ if( $drillHandle->is_active() ) {
 Now that you've created your Drill connection handle, you can query Drill in a similar fashion as MySQL by calling
 the `query()` method. Once you've called the `query()` method, you can use one of the `fetch()` methods to retrieve
 the results, in a similar manner as MySQL.  Currently, the Drill connector currently has:
-* **`fetch_all()`**:  Returns all query results in an associative array.
-* **`fetch_assoc()`**:  Returns a single query row as an associative array.
-* **`fetch_object()`**:  Returns a single row as a PHP Object.
+* **`fetchAll()`**:  Returns all query results in an associative array.
+* **`fetchAssoc()`**:  Returns a single query row as an associative array.
+* **`fetchObject()`**:  Returns a single row as a PHP Object.
 
 You might also find these functions useful:
-* **`data_seek($n)`**: Returns the row at index `$n` and sets the current row to `$n`. 
-* **`num_rows()`**: Returns the number of rows returned by the query.
-* **`field_count()`**:  Returns the number of columns returned by the query.
+* **`dataSeek($n)`**: Returns the row at index `$n` and sets the current row to `$n`. 
+* **`numEows()`**: Returns the number of rows returned by the query.
+* **`fieldCount()`**:  Returns the number of columns returned by the query.
 
 Thus, if you want to execute a query in Drill, you can do so as follows:
 ```PHP
@@ -52,13 +57,13 @@ while( $row = $query_result->fetch_assoc() ) {
 ## Interacting with Drill
 You can also use the connector to activate/deactivate Drill's storage as well as get information about Drill's plugins.
 
-* **`disable_plugin( $plugin )`**  Disables the given plugin.  Returns true if successful, false if not.
-* **`enable_plugin( $plugin )`**   Enables the given plugin.  Returns true if successful, false if not.
-* **`get_all_storage_plugins()`**  Returns an array of all storage plugins.
-* **`get_disabled_storage_plugins()`**  Returns an array of all disabled plugins.
-* **`get_enabled_storage_plugins()`**  Returns an array of all enabled plugins.
-* **`get_storage_plugins()`**  Returns an associative array of plugins and associated configuration options for all plugins.
-* **`get_storage_plugin_info( $plugin )`**  Returns an associative array of configuration options for a given plugin. 
-* **`save_storage_plugin( $plugin_name, $config )`**  Creates or edits a storage plugin. Returns true if successful,
+* **`disablePlugin( $plugin )`**  Disables the given plugin.  Returns true if successful, false if not.
+* **`enablePlugin( $plugin )`**   Enables the given plugin.  Returns true if successful, false if not.
+* **`getAllStoragePlugins()`**  Returns an array of all storage plugins.
+* **`getDisabledStoragePlugins()`**  Returns an array of all disabled plugins.
+* **`getEnabledStoragePlugins()`**  Returns an array of all enabled plugins.
+* **`getStoragePlugins()`**  Returns an associative array of plugins and associated configuration options for all plugins.
+* **`getStoragePluginInfo( $plugin )`**  Returns an associative array of configuration options for a given plugin. 
+* **`saveStoragePlugin( $plugin_name, $config )`**  Creates or edits a storage plugin. Returns true if successful,
 throws exception if not.
-* **`delete_storage_plugin( $plugin_name )`**  Deletes a storage plugin. Returns true if successful, throws exception if not.
+* **`deleteStoragePlugin( $plugin_name )`**  Deletes a storage plugin. Returns true if successful, throws exception if not.
