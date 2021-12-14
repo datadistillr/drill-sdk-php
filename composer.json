@@ -31,7 +31,7 @@
     },
     "repositories" : [{
       "type": "vcs",
-      "url": "https://github.com/datadistillr/drill-php"
+      "url": "https://github.com/datadistillr/drill-sdk-php"
       }
     ],
     "autoload": {

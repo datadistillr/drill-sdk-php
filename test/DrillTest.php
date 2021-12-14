@@ -1,35 +1,36 @@
 <?php
 
-namespace thedataist\Drill;
+namespace datadistillr\Drill;
 
 use Exception;
 use PHPUnit\Framework\TestCase;
 
-use thedataist\Drill\DrillConnection;
-use thedataist\Drill\Result;
+use datadistillr\Drill\DrillConnection;
+use datadistillr\Drill\Result;
+use ReflectionClass;
 
 
 class DrillTest extends TestCase {
 	
-	protected $host = 'drill.dev.datadistillr.io';
-	protected $port = 443;
+	protected $host = 'localhost';
+	protected $port = 8047;
 	protected $username = '';
 	protected $password = '';
-	protected $ssl = true;
+	protected $ssl = false;
 	protected $row_limit = 10000;
 	
 	protected $drill = null;
 
 	public function testConnection() {
 		$this->drill = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$active = $this->drill->is_active();
+		$active = $this->drill->isActive();
 		$this->assertEquals(true, $active);
 	}
 
 	public function testBadConnection() {
 		try {
 			$this->baddrill = new DrillConnection($this->host, 8048);
-			$active = $this->baddrill->is_active();
+			$active = $this->baddrill->isActive();
 		} catch(Exception $e) {
 			$active = false;
 		} finally {
@@ -44,9 +45,9 @@ class DrillTest extends TestCase {
 		$result = $this->drill->query('SELECT * FROM `cp`.`employee.json` LIMIT 7');
 
 
-		$this->assertEmpty($this->drill->error_message());
+		$this->assertEmpty($this->drill->errorMessage());
 
-		$fieldCount = $result->field_count();
+		$fieldCount = $result->fieldCount();
 		$this->assertEquals(16, $fieldCount);
 	}
 
@@ -71,36 +72,40 @@ class DrillTest extends TestCase {
 
 	public function testPlugins() {
 		$d = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$plugins = $d->get_all_storage_plugins();
+		$plugins = $d->getAllStoragePlugins();
 		$this->assertEquals(15, count($plugins));
 
-		$enabledPlugins = $d->get_enabled_storage_plugins();
+		$enabledPlugins = $d->getEnabledStoragePlugins();
 		$this->assertEquals(6, count($enabledPlugins));
 	}
 
 	public function testErrorMessage() {
     $this->drill = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
     $result = $this->drill->query("SELECT CAST('abc' AS INT) FROM (VALUES(1))");
-    $this->assertNotEmpty($this->drill->error_message());
+    $this->assertNotEmpty($this->drill->errorMessage());
     $this->assertStringStartsWith("Unexpected exception during fragment initialization",
-      $this->drill->error_message());
+      $this->drill->errorMessage());
   }
 
 	public function testFormatTable() {
 		$d = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$file_with_workspace = $d->format_drill_table("dfs.test.data.csv", true);
+		$reflector = new ReflectionClass( 'DrillConnection' );
+		$fdtMethod = $reflector->getMethod('formatDrillTable');
+		$fdtMethod->setAccessible(true);
+
+		$file_with_workspace = $fdtMethod->invokeArgs($this->drill, ["dfs.test.data.csv", true]);
 		$this->assertEquals("dfs.`test`.`data.csv`", $file_with_workspace);
 
-		$file_without_workspace = $d->format_drill_table("dfs.test.csv", true);
+		$file_without_workspace = $fdtMethod->invokeArgs($this->drill, ["dfs.test.csv", true]);
 		$this->assertEquals("dfs.`test.csv`", $file_without_workspace);
 
-		$file_with_workspace_and_backticks = $d->format_drill_table("`dfs`.`test`.`data.csv`", true);
+		$file_with_workspace_and_backticks = $fdtMethod->invokeArgs($this->drill, ["`dfs`.`test`.`data.csv`", true]);
 		$this->assertEquals("dfs.`test`.`data.csv`", $file_with_workspace_and_backticks);
 
-		$db_2_part = $d->format_drill_table("mysql.sales", false);
+		$db_2_part = $fdtMethod->invokeArgs($this->drill, ["mysql.sales", false]);
 		$this->assertEquals("`mysql`.`sales`", $db_2_part);
 
-		$db_3_part = $d->format_drill_table("mysql.sales.customers", false);
+		$db_3_part = $fdtMethod->invokeArgs($this->drill, ["mysql.sales.customers", false]);
 		$this->assertEquals("`mysql`.`sales`.`customers`", $db_3_part);
 	}
 

@@ -13,7 +13,8 @@ use datadistillr\Drill\ResultSet\Schema;
 use datadistillr\Drill\ResultSet\Table;
 
 /**
- * @package Drill
+ * @package datadistillr\drill-sdk-php
+ *
  * @author Charles Givre <cgivre@thedataist.com>
  * @author Tim Swagger <tim@datadistillr.com>
  */
