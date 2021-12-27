@@ -2,6 +2,8 @@
 
 namespace datadistillr\Drill;
 
+use datadistillr\Drill\Request\RequestUrl;
+use datadistillr\Drill\Response\Response;
 use stdClass;
 
 /**
@@ -33,14 +35,6 @@ class Result {
 	protected string $query;
 
 	/**
-	 * Row Pointer
-	 *
-	 * @todo expand this definition
-	 * @var int $rowPointer
-	 */
-	protected int $rowPointer;
-
-	/**
 	 * Meta Data
 	 * @var string[] $metadata
 	 */
@@ -52,6 +46,12 @@ class Result {
 	 * @todo identify actual datatype
 	 */
 	protected array $schema = [];
+
+	/**
+	 * Request URL (and metadata)
+	 * @var RequestUrl $requestUrl
+	 */
+	protected RequestUrl $requestUrl;
 
 	// endregion
 	// region Static Functions
@@ -82,16 +82,17 @@ class Result {
 	/**
 	 * Result constructor.
 	 *
-	 * @param array $response Response Data from Drill Query
+	 * @param Response $response Response Data from Drill Query
 	 * @param string $query Query String
+	 * @param RequestUrl $url Request URL
 	 * @todo review if response should be sent as an array or object
 	 */
-	public function __construct(array $response, string $query) {
-		$this->columns = $response['columns'] ?? [];
-		$this->rows = $response['rows'] ?? [];
-		$this->metadata = $response['metadata'] ?? [];
+	public function __construct(Response $response, string $query, RequestUrl $url) {
+		$this->columns = $response->columns ?? [];
+		$this->rows = $response->rows ?? [];
+		$this->metadata = $response->metadata ?? [];
 		$this->query = $query;
-		$this->rowPointer = 0;
+		$this->requestUrl = $url;
 
 		for ($i = 0; $i < count($this->columns); $i++) {
 			$info = [
@@ -105,32 +106,6 @@ class Result {
 	// endregion
 	// region Primary Class Methods
 
-	function data_seek($n) {
-		if (!is_int($n)) {
-			return false;
-		} elseif ($n > count($this->rows)) {
-			return false;
-		} else {
-			$this->rowPointer = $n;
-			return true;
-		}
-	}
-
-	/**
-	 * Fetch results as an associative array
-	 *
-	 * @return array
-	 */
-	public function fetchAssoc(): array {
-		if ($this->rowPointer >= count($this->rows)) {
-			return [];
-		} else {
-			$result = $this->rows[$this->rowPointer];
-			$this->rowPointer++;
-			return $result;
-		}
-	}
-
 	/**
 	 * Retrieve Schema Array
 	 *
@@ -142,10 +117,9 @@ class Result {
 	}
 
 	/**
-	 * Retrieve Data Rows
+	 * Retrieve raw data rows
 	 *
 	 * @return array
-	 * @todo possibly move this to another location
 	 */
 	public function getRows(): array {
 		return $this->rows;
@@ -155,39 +129,21 @@ class Result {
 	 * Fetch column names from results
 	 *
 	 * @return array
-	 * @todo possibly move this to another location
 	 */
 	function getColumns(): array {
-		return $this->columns ?? [];
+		return $this->columns;
 	}
 
 	/**
-	 * Alias to fetch method
+	 * Fetch First Result
 	 *
-	 * @see fetch()
-	 * @return ?stdClass
+	 * @return ?object First ResultSet item
 	 */
-	public function fetchObject(): ?stdClass {
-		return $this->fetch();
-	}
-
-	/**
-	 * Fetch Results
-	 *
-	 * @return ?stdClass
-	 */
-	function fetch(): ?stdClass {
-		if ($this->rowPointer >= count($this->rows)) {
-			return null;
-		} else {
-			$result = $this->rows[$this->rowPointer];
-			$resultObject = new stdClass();
-			foreach ($result as $key => $value) {
-				$resultObject->$key = $value;
-			}
-			$this->rowPointer++;
-			return $resultObject;
+	function first(): ?object {
+		if(isset($this->rows[0])) {
+			return $this->rows[0];
 		}
+		return null;
 	}
 
 	/**
@@ -200,15 +156,6 @@ class Result {
 	}
 
 	/**
-	 * Check if there are results beyond the current row index
-	 *
-	 * @return bool
-	 */
-	public function hasMoreResults(): bool {
-		return $this->rowPointer < count($this->rows);
-	}
-
-	/**
 	 * Retrieve the number of resulting rows
 	 *
 	 * @return int Number of Rows
@@ -218,6 +165,11 @@ class Result {
 	}
 
 	// endregion
+	// region Private Method
+
+
+	// endregion
+	// ---------------------------------------------------------------------------
 	// region Deprecated Methods
 
 	/**
@@ -244,36 +196,7 @@ class Result {
 		return $this->getSchema();
 	}
 
-	/**
-	 * Fetch Associative Array
-	 *
-	 * @return array
-	 * @deprecated v0.6.0 use fetchAssoc()
-	 */
-	function fetch_assoc(): array {
-		return $this->fetchAssoc();
-	}
 
-	/**
-	 * Alias to fetch method
-	 *
-	 * @see fetch()
-	 * @return ?stdClass
-	 * @deprecated v0.6.0 use fetchAssoc()
-	 */
-	function fetch_object(): ?stdClass {
-		return $this->fetchObject();
-	}
-
-	/**
-	 * Fetch all rows
-	 *
-	 * @return array
-	 * @deprecated v0.6.0 use getRows()
-	 */
-	function fetch_all(): array {
-		return $this->getRows();
-	}
 
 	/**
 	 * Fetch column names from results

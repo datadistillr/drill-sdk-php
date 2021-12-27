@@ -2,15 +2,28 @@
 
 namespace datadistillr\Drill;
 
-use Error;
-use Exception;
+use datadistillr\Drill\Request\RequestUrl;
+use datadistillr\Drill\Response\ClusterResponse;
+use datadistillr\Drill\Response\ConfirmationResponse;
+use datadistillr\Drill\Response\OptionsListResponse;
+use datadistillr\Drill\Response\ProfileResponse;
+use datadistillr\Drill\Response\ProfilesResponse;
+use datadistillr\Drill\Response\QueryResponse;
+use datadistillr\Drill\Response\Response;
 use datadistillr\Drill\Request\PluginData;
 use datadistillr\Drill\Request\QueryData;
 use datadistillr\Drill\Request\RequestData;
+use datadistillr\Drill\Response\StatusMetricsResponse;
+use datadistillr\Drill\Response\StatusResponse;
+use datadistillr\Drill\Response\StatusThreadsResponse;
+use datadistillr\Drill\Response\StoragePluginListResponse;
+use datadistillr\Drill\Response\StoragePluginResponse;
 use datadistillr\Drill\ResultSet\Column;
 use datadistillr\Drill\ResultSet\Plugin;
 use datadistillr\Drill\ResultSet\Schema;
 use datadistillr\Drill\ResultSet\Table;
+use Error;
+use Exception;
 
 /**
  * @package datadistillr\drill-sdk-php
@@ -137,22 +150,22 @@ class DrillConnection {
 	 */
 	public function query(string $query): ?Result {
 
-		$url = $this->buildUrl('query');
+		$url = new RequestUrl('query', $this->hostname, $this->port, $this->ssl);
 
 		$postData = new QueryData($query, $this->rowLimit);
 
 		try {
-			$response = $this->drillRequest($url, 'POST', $postData);
+			$response = $this->drillRequest($url, $postData);
 		} catch (Error $e) {
 			throw new Exception($e->getMessage());
 		}
 
-		if (isset($response['errorMessage'])) {
-			$this->errorMessage = $response['errorMessage'];
-			$this->stackTrace = $response['stackTrace'] ?? '';
+		if (isset($response->errorMessage)) {
+			$this->errorMessage = $response->errorMessage;
+			$this->stackTrace = $response->stackTrace ?? '';
 			throw new Exception("Error in query: {$query}");
 		} else {
-			return new Result($response, $query);
+			return new Result($response, $query, $url);
 		}
 
 	}
@@ -167,7 +180,8 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function enablePlugin(string $plugin): bool {
-		$url = $this->buildUrl('enablePlugin', $plugin);
+		$url = new RequestUrl('enablePlugin', $this->hostname, $this->port, $this->ssl, $plugin);
+
 		$result = $this->drillRequest($url);
 
 		if (isset($result['result']) && $result['result'] === 'success') {
@@ -185,7 +199,9 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function disablePlugin(string $plugin): bool {
-		$url = $this->buildUrl('disablePlugin', $plugin);
+
+		$url = new RequestUrl('disablePlugin', $this->hostname, $this->port, $this->ssl, $plugin);
+
 		$result = $this->drillRequest($url);
 
 		if (isset($result['result']) && $result['result'] === 'success') {
@@ -215,7 +231,7 @@ class DrillConnection {
 		$query = "SELECT `SCHEMA_NAME`, `TYPE` FROM `INFORMATION_SCHEMA`.`SCHEMATA` WHERE `SCHEMA_NAME` LIKE '{$plugin}%' LIMIT 1";
 
 		// Should only be one row
-		$info = $this->query($query)->fetch();
+		$info = $this->query($query)->first();
 
 		if (! isset($info) || ! isset($info->TYPE)) {
 			return null;
@@ -229,15 +245,15 @@ class DrillConnection {
 	 *
 	 * @return array The list of all storage plugins, empty array if none
 	 */
-	function getAllStoragePlugins(): array {
+	public function getAllStoragePlugins(): array {
 		$pluginInfo = $this->getStoragePlugins();
 		$allPlugins = [];
 		$enabledPlugins = [];
 
 		foreach ($pluginInfo as $plugin) {
-			$allPlugins[] = $plugin['name'];
-			if ($pluginInfo['config']['enabled'] == 1) {
-				$enabledPlugins[] = $plugin['name'];
+			$allPlugins[] = $plugin->name;
+			if (isset($plugin->config->enabled) && $plugin->config->enabled) {
+				$enabledPlugins[] = $plugin->name;
 			}
 		}
 
@@ -257,8 +273,9 @@ class DrillConnection {
 	 */
 	public function getStoragePlugins(): array {
 
-		$url = $this->buildUrl('storage');
-		return $this->drillRequest($url);
+		$url = new RequestUrl('storage', $this->hostname, $this->port, $this->ssl);
+		$storage = $this->drillRequest($url);
+		return $storage->plugins;
 	}
 
 	/**
@@ -266,7 +283,7 @@ class DrillConnection {
 	 *
 	 * @return array List of disabled storage plugins, empty array if none
 	 */
-	function getDisabledStoragePlugins(): array {
+	public function getDisabledStoragePlugins(): array {
 		$pluginInfo = $this->getStoragePlugins();
 		$disabledPlugins = [];
 
@@ -308,7 +325,7 @@ class DrillConnection {
 		$pluginInfo = $this->getStoragePlugins();
 		$enabledPlugins = [];
 		foreach ($pluginInfo as $plugin) {
-			if (isset($plugin['config']['enabled']) && $plugin['config']['enabled']) {
+			if (isset($plugin->config->enabled) && $plugin->config->enabled) {
 				$enabledPlugins[] = $plugin;
 			}
 		}
@@ -359,12 +376,12 @@ class DrillConnection {
 	 *
 	 * @param string $plugin The plain text name of the storage plugin.
 	 *
-	 * @return array Array containing all configuration options for the given plugin
+	 * @return object containing all configuration options for the given plugin
 	 * @throws Exception
 	 */
-	function getStoragePluginInfo(string $plugin): array {
+	function getStoragePluginInfo(string $plugin): object {
 
-		$url = $this->buildUrl('plugin-info', $plugin);
+		$url = new RequestUrl('pluginInfo', $this->hostname, $this->port, $this->ssl, $plugin);
 
 		return $this->drillRequest($url);
 	}
@@ -378,11 +395,11 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function saveStoragePlugin(string $pluginName, array $config): ?bool {
-		$url = $this->buildUrl('plugin-info', $pluginName);
+		$url = new RequestUrl('createPlugin', $this->hostname, $this->port, $this->ssl, $pluginName);
 
 		$postData = new PluginData($pluginName, $config);
 
-		$response = $this->drillRequest($url, 'POST', $postData);
+		$response = $this->drillRequest($url, $postData);
 
 		if (isset($response['errorMessage'])
 			|| isset($response['result']) && strtolower($response['result']) !== 'success'
@@ -403,9 +420,9 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function deleteStoragePlugin(string $pluginName): ?bool {
-		$url = $this->buildUrl('plugin-info', $pluginName);
+		$url = new RequestUrl('deletePlugin', $this->hostname, $this->port, $this->ssl, $pluginName);
 
-		$response = $this->drillRequest($url, 'DELETE');
+		$response = $this->drillRequest($url);
 
 		if (isset($response['errorMessage'])
 			|| isset($response['result']) && strtolower($response['result']) !== 'success'
@@ -431,7 +448,7 @@ class DrillConnection {
 	 */
 	public function getSchemaNames(?string $plugin = null, bool $stripPlugin = false): ?array {
 
-		if (!$this->isActive()) {
+		if (! $this->isActive()) {
 			return null;
 		}
 
@@ -449,7 +466,7 @@ class DrillConnection {
 		$schemata = [];
 		// TODO: strip tables as well.
 		foreach ($rawResults as $result) {
-			$schema = $result['SCHEMA_NAME'];
+			$schema = $result->SCHEMA_NAME;
 			if ($schema != 'cp.default' &&
 				$schema != 'INFORMATION_SCHEMA' &&
 				$schema != 'information_schema' &&
@@ -569,10 +586,10 @@ class DrillConnection {
 			$tables = $this->query($sql)->getRows();
 
 			foreach ($tables as $table) {
-				if (strpos($table['TABLE_NAME'], 'view.drill')) {
-					$tableName = str_replace('view.drill', '', $table['TABLE_NAME']);
+				if (strpos($table->TABLE_NAME, 'view.drill')) {
+					$tableName = str_replace('view.drill', '', $table->TABLE_NAME);
 				} else {
-					$tableName = $table['TABLE_NAME'];
+					$tableName = $table->TABLE_NAME;
 				}
 				$tableNames[] = $tableName;
 			}
@@ -631,7 +648,7 @@ class DrillConnection {
 			$pluginType = $this->getPluginType($plugin);
 		}
 
-		$filePath = "{$plugin}.{$schema}.{$tableName}";
+		$filePath = "{$schema}.{$tableName}";
 
 		// Since MongoDB uses the ** notation, bypass that and query the data directly
 		// TODO: Add API functionality here as well
@@ -639,14 +656,11 @@ class DrillConnection {
 
 			$views = $this->getViewNames($plugin, $schema);
 
-			if ($pluginType === 'mongo' || $pluginType === 'splunk') {
-				$quotedFileName = $this->formatDrillTable($filePath, false);
-				$sql = "SELECT * FROM {$quotedFileName} LIMIT 1";
-			} else if (in_array($tableName, $views)) {
+			if (in_array($tableName, $views)) {
 				$viewName = "`{$plugin}.{$schema}`.`{$tableName}`"; // NOTE: escape char ` may need to go around plugin and schema separately
 				$sql = "SELECT * FROM {$viewName} LIMIT 1";
 			} else {
-				$quotedFileName = $this->formatDrillTable($filePath, true);
+				$quotedFileName = $this->formatDrillTable($plugin, $filePath);
 				$sql = "SELECT * FROM {$quotedFileName} LIMIT 1";
 			}
 
@@ -662,7 +676,7 @@ class DrillConnection {
 			/*
 			 * Case for everything else.
 			 */
-			$quotedSchema = $this->formatDrillTable($filePath, false);
+			$quotedSchema = $this->formatDrillTable($plugin, $filePath, false);
 			$sql = "DESCRIBE {$quotedSchema}";
 		}
 
@@ -674,9 +688,9 @@ class DrillConnection {
 				'plugin' => $plugin,
 				'schema' => $schema,
 				'table' => $tableName,
-				'name' => $row['COLUMN_NAME'],
-				'dataType' => $row['DATA_TYPE'],
-				'isNullable' => $row['IS_NULLABLE']
+				'name' => $row->COLUMN_NAME,
+				'dataType' => $row->DATA_TYPE,
+				'isNullable' => $row->IS_NULLABLE
 			];
 
 			$columns[] = new Column($data);
@@ -756,39 +770,53 @@ class DrillConnection {
 	/**
 	 * Format Drill Table
 	 *
-	 * @param string $schema Schema name
-	 * @param bool $isFile Schema/DB is a file
+	 * @param string $plugin Plugin name
+	 * @param string $schema Schema path
 	 *
 	 * @return string
+	 * @throws Exception
 	 */
-	protected function formatDrillTable(string $schema, bool $isFile): string {
-		$formattedSchema = '';
+	protected function formatDrillTable(string $plugin, string $schema): string {
+		$formattedSchema = "`{$plugin}`";
 
-		$numDots = substr_count($schema, '.');
+		try {
+			$pluginInfo = $this->getStoragePluginInfo($plugin);
+		} catch (Exception $e) {
+			throw new Exception('Error acquiring plugin info');
+		}
+
 		$schema = str_replace('`', '', $schema);
 
 		// For files, the last section will be the file extension
 		$schemaParts = explode('.', $schema);
 
-		if ($isFile && $numDots == 3) {
-			// Case for file and workspace
-			$plugin = $schemaParts[0];
-			$workspace = $schemaParts[1];
-			$table = "{$schemaParts[2]}.{$schemaParts[3]}";
-			$formattedSchema = "{$plugin}.`{$workspace}`.`{$table}`";
-		} elseif ($isFile && $numDots == 2) {
-			// Case for File and no workspace
-			$plugin = $schemaParts[0];
-			$formattedSchema = "`{$plugin}`.`{$schemaParts[1]}`.`{$schemaParts[2]}`";
+		if (isset($pluginInfo->config->type) && $pluginInfo->config->type === 'file') {
+			$workspaces = [];
+			foreach($pluginInfo->config->workspaces as $name=>$data) {
+				$workspaces[] = $name;
+			}
+
+			$dotCounter = 0;
+			$remaining = '';
+			foreach($schemaParts as $part) {
+
+				// check if first $part is in workspace array
+				if($dotCounter++ < 1 && in_array($part, $workspaces)) {
+					$formattedSchema .= ".`{$part}`";
+				}
+				else{
+					$remaining .= $remaining =='' ? $part : ".{$part}";
+				}
+			}
+
+			if($remaining != '') {
+				$formattedSchema .= ".`{$remaining}`";
+			}
+
 		} else {
 			// Case for everything else
-			foreach ($schemaParts as $part) {
-				$quotedPart = "`{$part}`";
-				if (strlen($formattedSchema) > 0) {
-					$formattedSchema = "{$formattedSchema}.{$quotedPart}";
-				} else {
-					$formattedSchema = $quotedPart;
-				}
+			foreach($schemaParts as $part) {
+				$formattedSchema .= ".`{$part}`";
 			}
 		}
 		return $formattedSchema;
@@ -806,64 +834,30 @@ class DrillConnection {
 	// endregion
 	// region Private Methods
 
-	/**
-	 * Build URL
-	 *
-	 * @param string $function The Function to be called [default: '']
-	 * @param string $extra Any extra to be included [default: '']
-	 *
-	 * @return string The completed URL
-	 */
-	private function buildUrl(string $function = '', string $extra = ''): string {
 
-		$protocol = $this->ssl ? 'https://' : 'http://';
-
-		switch ($function) {
-			case 'query':
-				$path = '/query.json';
-				break;
-			case 'storage':
-				$path = '/storage.json';
-				break;
-			case 'plugin-info':
-				$path = '/storage/' . $extra . '.json';
-				break;
-			case 'enablePlugin':
-				$path = '/storage/' . $extra . '/enable/true';
-				break;
-			case 'disablePlugin':
-				$path = '/storage/' . $extra . '/enable/false';
-				break;
-			default:
-				$path = '';
-		}
-
-		return $protocol . $this->hostname . ':' . $this->port . $path;
-	}
 
 	/**
 	 * Initiate Request to Drill Server
 	 *
-	 * @param string $url Request Endpoint URL
-	 * @param string $requestType HTTP Request type [default: GET]
-	 *    Options GET, DELETE, POST
+	 * @param RequestUrl $url Request Endpoint URL
 	 * @param ?RequestData $postData Post Data [default: null]
-	 * @return array
+	 * @return ?Response
 	 *
 	 * @throws Error
 	 * @throws Exception
 	 */
-	private function drillRequest(string $url, string $requestType = 'GET', ?RequestData $postData = null): array {
+	private function drillRequest(RequestUrl $url, ?RequestData $postData = null): ?Response {
 
 		$curlOptions = [
-			CURLOPT_CUSTOMREQUEST => $requestType
+			CURLOPT_CUSTOMREQUEST => $url->getRequestType(),
+			CURLOPT_RETURNTRANSFER => true
 		];
 
 		$curlHeaders = [
 			'Content-Type: application/json'
 		];
 
-		switch ($requestType) {
+		switch ($url->getRequestType()) {
 			case 'GET':
 				$curlOptions[CURLOPT_HEADER] = 0;
 				break;
@@ -877,27 +871,71 @@ class DrillConnection {
 				throw new Exception('Invalid Request Type');
 		}
 
-		$curlOptions[CURLOPT_RETURNTRANSFER] = true;
-
-		$ch = curl_init($url);
+		$ch = curl_init($url->getUrl());
 		curl_setopt_array($ch, $curlOptions);
 
 		$response = curl_exec($ch);
 
+		// check for errors. If any, close connection and throw Error
 		if ($error = curl_error($ch)) {
 			curl_close($ch);
-
 			throw new Error($error);
 		}
 
 		curl_close($ch);
 
-		$result = json_decode($response, true);
-		if (isset($result)) {
-			return $result;
+		// TODO: create response object based on request type....
+
+		$result = json_decode($response);
+		if (! isset($result)) {
+			return null;
 		}
 
-		return [];
+		unset($response);
+
+		switch ($url->getFunction()) {
+			case 'query':
+				$response = new QueryResponse($result);
+				break;
+			case 'profiles':
+				$response = new ProfilesResponse($result);
+				break;
+			case 'profile':
+				$response = new ProfileResponse($result);
+				break;
+			case 'deletePlugin':
+			case 'cancelProfile':
+			case 'enablePlugin':
+			case 'disablePlugin':
+				$response = new ConfirmationResponse($result);
+				break;
+			case 'storage':
+				$response = new StoragePluginListResponse($result);
+				break;
+			case 'createPlugin':
+			case 'pluginInfo':
+				$response = new StoragePluginResponse($result);
+				break;
+			case 'drillbits':
+				$response = new ClusterResponse($result);
+				break;
+			case 'status':
+				$response = new StatusResponse($result);
+				break;
+			case 'metrics':
+				$response = new StatusMetricsResponse($result);
+				break;
+			case 'threadStatus':
+				$response = new StatusThreadsResponse($result);
+				break;
+			case 'options':
+				$response = new OptionsListResponse($result);
+				break;
+			default:
+				throw new Exception('Unable to determine request/response type');
+		}
+
+		return $response;
 	}
 
 
@@ -1122,43 +1160,6 @@ class DrillConnection {
 	 */
 	function format_drill_table(string $schema, bool $is_file): string {
 		return $this->formatDrillTable($schema, $is_file);
-	}
-
-	/**
-	 * Initiate GET Request to Drill server
-	 *
-	 * @param string $url Full URL Request to Drill Server
-	 * @return array Associative array
-	 * @throws Exception
-	 * @deprecated v0.5.6
-	 */
-	private function get_request(string $url): array {
-		return $this->drillRequest($url);
-	}
-
-	/**
-	 * Initiate POST Request to Drill server
-	 *
-	 * @param string $url Full URL Request to Drill Server
-	 * @param array $postData Associative array of data
-	 * @return array returns associative array
-	 * @throws Exception
-	 * @deprecated v0.5.6
-	 */
-	private function post_request(string $url, array $postData): array {
-		return $this->drillRequest($url, 'POST', $postData);
-	}
-
-	/**
-	 * Initiate DELETE Request to Drill server
-	 *
-	 * @param string $url Full URL Request to Drill Server
-	 * @return array returns associative array
-	 * @throws Exception
-	 * @deprecated v0.5.6 use drillRequest()
-	 */
-	private function delete_request(string $url): array {
-		return $this->drillRequest($url, 'DELETE');
 	}
 
 	/**
