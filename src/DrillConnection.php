@@ -735,6 +735,11 @@ class DrillConnection {
 
 		} elseif($pluginType === 'jdbc') {
 
+			// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
+			$pluginInfo = $this->getStoragePluginInfo($plugin);
+
+			throw new \Exception(json_encode($pluginInfo));
+
 			if($itemCount < 1) {
 				$list = $this->getSchemaNames($plugin, true);
 				$results = [];
