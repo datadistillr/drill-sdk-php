@@ -2,6 +2,8 @@
 
 namespace datadistillr\Drill;
 
+use datadistillr\Drill\Logs\Logger;
+use datadistillr\Drill\Logs\LogType;
 use datadistillr\Drill\Request\RequestUrl;
 use datadistillr\Drill\Response\ClusterResponse;
 use datadistillr\Drill\Response\ConfirmationResponse;
@@ -32,6 +34,8 @@ use Exception;
  * @author Tim Swagger <tim@datadistillr.com>
  */
 class DrillConnection {
+
+	use Logger;
 
 	// region Properties
 	/**
@@ -221,6 +225,7 @@ class DrillConnection {
 	 * @todo This does not always return the plugin type.  Need better query
 	 */
 	public function getPluginType(?string $plugin): ?string {
+		$this->logMessage(LogType::Info, 'Starting Plugin Type check');
 		if (! isset($plugin) || ! $this->isActive()) {
 			return null;
 		}
@@ -237,6 +242,7 @@ class DrillConnection {
 			return null;
 		}
 
+		$this->logMessage(LogType::Info, 'Plugin Type check complete.  Type: ' . $info->TYPE);
 		return strtolower($info->TYPE);
 	}
 
@@ -713,6 +719,8 @@ class DrillConnection {
 	 * @todo Currently only works for JDBC Connection Types, Needs to be expanded for Files
 	 */
 	public function getNestedTree(string $plugin, ...$pathItems): array {
+		$this->logMessage(LogType::Info, 'Starting getNestedTree() request.');
+
 		$pluginType = $this->getPluginType($plugin);
 
 		$itemCount = count($pathItems);
@@ -762,6 +770,7 @@ class DrillConnection {
 			}
 		}
 
+		$this->logMessage(LogType::Info, 'Ending getNestedTree() request.');
 		return $results;
 
 	}
