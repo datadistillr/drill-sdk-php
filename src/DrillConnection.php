@@ -218,32 +218,27 @@ class DrillConnection {
 	/**
 	 * Identify plugin type
 	 *
-	 * @param ?string $plugin Plugin name
+	 * @param ?string $pluginName Plugin name
 	 *
 	 * @return ?string The plugin type, or null on error
 	 * @throws Exception
 	 * @todo This does not always return the plugin type.  Need better query
 	 */
-	public function getPluginType(?string $plugin): ?string {
-		$this->logMessage(LogType::Info, 'Starting Plugin Type check');
-		if (! isset($plugin) || ! $this->isActive()) {
+	public function getPluginType(?string $pluginName): ?string {
+		$this->logMessage(LogType::Query, 'Starting Plugin Type check');
+		if (! isset($pluginName)) {
 			return null;
 		}
 
-		// Remove back ticks
-		$plugin = str_replace('`', '', $plugin);
+		$plugin = $this->getStoragePlugin($pluginName);
 
-		$query = "SELECT `SCHEMA_NAME`, `TYPE` FROM `INFORMATION_SCHEMA`.`SCHEMATA` WHERE `SCHEMA_NAME` LIKE '{$plugin}%' LIMIT 1";
-
-		// Should only be one row
-		$info = $this->query($query)->first();
-
-		if (! isset($info) || ! isset($info->TYPE)) {
+		if (! isset($plugin) || ! isset($plugin->config->type)) {
+			$this->logMessage(LogType::Error, 'Plugin Type check errored.  No Plugin.');
 			return null;
 		}
 
-		$this->logMessage(LogType::Info, 'Plugin Type check complete.  Type: ' . $info->TYPE);
-		return strtolower($info->TYPE);
+		$this->logMessage(LogType::Query, 'Plugin Type check complete.  Type: ' . $plugin->config->type);
+		return strtolower($plugin->config->type);
 	}
 
 	/**
@@ -270,6 +265,21 @@ class DrillConnection {
 	}
 
 	/**
+	 * This function returns an array of configuration options for a given storage plugin.
+	 *
+	 * @param string $plugin The plain text name of the storage plugin.
+	 *
+	 * @return ?StoragePluginResponse containing all configuration options for the given plugin
+	 * @throws Exception
+	 */
+	function getStoragePlugin(string $plugin): ?StoragePluginResponse {
+
+		$url = new RequestUrl('pluginInfo', $this->hostname, $this->port, $this->ssl, $plugin);
+
+		return new StoragePluginResponse($this->drillRequest($url));
+	}
+
+	/**
 	 * Retrieves an associative array of storage plugins.
 	 *
 	 * It will have all configuration options for the plugins.
@@ -278,16 +288,69 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function getStoragePlugins(): array {
+		$this->logMessage(LogType::Request, 'Starting Request to get Storage Plugins');
 
 		$url = new RequestUrl('storage', $this->hostname, $this->port, $this->ssl);
 		$storage = $this->drillRequest($url);
+
+		$this->logMessage(LogType::Request, 'Ending Request to get Storage Plugins');
 		return $storage->plugins;
+	}
+
+	/**
+	 * Save Storage Plugin. Creates or edits a storage plugin.
+	 *
+	 * @param string $pluginName Storage Plugin Name
+	 * @param array $config Config
+	 * @return bool|null
+	 * @throws Exception
+	 */
+	public function saveStoragePlugin(string $pluginName, array $config): ?bool {
+		$url = new RequestUrl('createPlugin', $this->hostname, $this->port, $this->ssl, $pluginName);
+
+		$postData = new PluginData($pluginName, $config);
+
+		$response = $this->drillRequest($url, $postData);
+
+		if (isset($response['errorMessage'])
+			|| isset($response['result']) && strtolower($response['result']) !== 'success'
+			|| !isset($response['result'])) {
+			$this->errorMessage = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
+			$this->stackTrace = $response['stackTrace'] ?? '';
+			throw new Exception("Unable to save storage plugin: " . print_r($config, true));
+		} else {
+			return true;
+		}
+	}
+
+	/**
+	 * Delete Storage Plugin
+	 *
+	 * @param string $pluginName Storage Plugin Name
+	 * @return bool|null
+	 * @throws Exception
+	 */
+	public function deleteStoragePlugin(string $pluginName): ?bool {
+		$url = new RequestUrl('deletePlugin', $this->hostname, $this->port, $this->ssl, $pluginName);
+
+		$response = $this->drillRequest($url);
+
+		if (isset($response['errorMessage'])
+			|| isset($response['result']) && strtolower($response['result']) !== 'success'
+			|| !isset($response['result'])) {
+			$this->errorMessage = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
+			$this->stackTrace = $response['stackTrace'] ?? '';
+			throw new Exception("Unable to delete storage plugin.");
+		} else {
+			return true;
+		}
 	}
 
 	/**
 	 * Retrieves a list of storage plugins which are disabled.
 	 *
 	 * @return array List of disabled storage plugins, empty array if none
+	 * @throws Exception
 	 */
 	public function getDisabledStoragePlugins(): array {
 		$pluginInfo = $this->getStoragePlugins();
@@ -377,69 +440,7 @@ class DrillConnection {
 		return $this->stackTrace;
 	}
 
-	/**
-	 * This function returns an array of configuration options for a given storage plugin.
-	 *
-	 * @param string $plugin The plain text name of the storage plugin.
-	 *
-	 * @return object containing all configuration options for the given plugin
-	 * @throws Exception
-	 */
-	function getStoragePluginInfo(string $plugin): object {
 
-		$url = new RequestUrl('pluginInfo', $this->hostname, $this->port, $this->ssl, $plugin);
-
-		return $this->drillRequest($url);
-	}
-
-	/**
-	 * Save Storage Plugin. Creates or edits a storage plugin.
-	 *
-	 * @param string $pluginName Storage Plugin Name
-	 * @param array $config Config
-	 * @return bool|null
-	 * @throws Exception
-	 */
-	public function saveStoragePlugin(string $pluginName, array $config): ?bool {
-		$url = new RequestUrl('createPlugin', $this->hostname, $this->port, $this->ssl, $pluginName);
-
-		$postData = new PluginData($pluginName, $config);
-
-		$response = $this->drillRequest($url, $postData);
-
-		if (isset($response['errorMessage'])
-			|| isset($response['result']) && strtolower($response['result']) !== 'success'
-			|| !isset($response['result'])) {
-			$this->errorMessage = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
-			$this->stackTrace = $response['stackTrace'] ?? '';
-			throw new Exception("Unable to save storage plugin: " . print_r($config, true));
-		} else {
-			return true;
-		}
-	}
-
-	/**
-	 * Delete Storage Plugin
-	 *
-	 * @param string $pluginName Storage Plugin Name
-	 * @return bool|null
-	 * @throws Exception
-	 */
-	public function deleteStoragePlugin(string $pluginName): ?bool {
-		$url = new RequestUrl('deletePlugin', $this->hostname, $this->port, $this->ssl, $pluginName);
-
-		$response = $this->drillRequest($url);
-
-		if (isset($response['errorMessage'])
-			|| isset($response['result']) && strtolower($response['result']) !== 'success'
-			|| !isset($response['result'])) {
-			$this->errorMessage = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
-			$this->stackTrace = $response['stackTrace'] ?? '';
-			throw new Exception("Unable to delete storage plugin.");
-		} else {
-			return true;
-		}
-	}
 	// endregion
 
 	// region Schema Methods
@@ -713,15 +714,20 @@ class DrillConnection {
 	 * This method allows you to pass in the path segments and it will attempt to figure out
 	 * how to return the nested schema/tables/columns, etc based on the type of Storage Plugin
 	 *
-	 * @param string $plugin The plugin name
+	 * @param string $pluginName The plugin name
 	 * @param string ...$pathItems The path to the required tree
 	 * @throws Exception
 	 * @todo Currently only works for JDBC Connection Types, Needs to be expanded for Files
 	 */
-	public function getNestedTree(string $plugin, ...$pathItems): array {
+	public function getNestedTree(string $pluginName, ...$pathItems): array {
 		$this->logMessage(LogType::Info, 'Starting getNestedTree() request.');
 
-		$pluginType = $this->getPluginType($plugin);
+		$plugin = $this->getStoragePlugin($pluginName);
+		if(! isset($plugin)) {
+			return [];
+		}
+		$pluginType = $plugin->config->type;
+		$specificType = $this->specificType($plugin);
 
 		$itemCount = count($pathItems);
 
@@ -744,29 +750,31 @@ class DrillConnection {
 		} elseif($pluginType === 'jdbc') {
 
 			// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
-			$pluginInfo = $this->getStoragePluginInfo($plugin);
+			$tableLevel = $this->jdbcTableLevel($specificType);
+
+
 
 			if($itemCount < 1) {
-				$list = $this->getSchemaNames($plugin, true);
+				$list = $this->getSchemaNames($pluginName, true);
 				$results = [];
 
 				foreach($list as $name) {
-					$results[] = new Schema(['plugin'=>$plugin, 'name'=>$name]);
+					$results[] = new Schema(['plugin'=>$pluginName, 'name'=>$name]);
 				}
 			}
 			elseif($itemCount == 1) {
-				$results = $this->getTables($plugin, $pathItems[0], $pluginType);
+				$results = $this->getTables($pluginName, $pathItems[0], $pluginType);
 			}
 			elseif($itemCount == 2) {
-				$results = $this->getColumns($plugin, $pathItems[0], $pathItems[1], $pluginType);
+				$results = $this->getColumns($pluginName, $pathItems[0], $pathItems[1], $pluginType);
 			}
 
 		} elseif($pluginType === 'mongo' || $pluginType === 'elastic') {
 			if($itemCount < 1) {
-				$results = $this->getTables($plugin, $pathItems[0], $pluginType);
+				$results = $this->getTables($pluginName, $pathItems[0], $pluginType);
 			}
 			elseif($itemCount == 1) {
-				$results = $this->getColumns($plugin, $pathItems[0], $pathItems[1], $pluginType);
+				$results = $this->getColumns($pluginName, $pathItems[0], $pathItems[1], $pluginType);
 			}
 		}
 
@@ -792,7 +800,7 @@ class DrillConnection {
 		$formattedSchema = "`{$plugin}`";
 
 		try {
-			$pluginInfo = $this->getStoragePluginInfo($plugin);
+			$pluginInfo = $this->getStoragePlugin($plugin);
 		} catch (Exception $e) {
 			throw new Exception('Error acquiring plugin info');
 		}
@@ -950,6 +958,51 @@ class DrillConnection {
 		return $response;
 	}
 
+
+	/**
+	 * Identify Specific Plugin Type
+	 *
+	 * @param StoragePluginResponse $plugin Plugin configuration object
+	 * @return ?String Plugin type
+	 */
+	protected function specificType(StoragePluginResponse $plugin): ?string {
+		switch($plugin->config->type) {
+			case 'jdbc':
+				$matches = [];
+				if(preg_match('/(?<=jdbc:)(\w+?)(?=:\/\/.*)/', $plugin->config->url, $matches)) {
+					$type = $matches[1];
+				}
+				else {
+					$type = null;
+				}
+				break;
+			case 'file':
+			case 'mongo':
+			case 'elastic':
+				$type = $plugin->config->type;
+				break;
+			default:
+				$type = null;
+		}
+
+		return $type;
+	}
+
+
+	/**
+	 * Get JDBC table level
+	 * @param string $specificType Specific JDBC Type
+	 *
+	 * @return int Level the table reference will be found at
+	 */
+	protected function jdbcTableLevel(string $specificType): int {
+		switch($specificType) {
+
+			default:
+				$level = 1;
+		}
+		return $level;
+	}
 
 
 	// endregion

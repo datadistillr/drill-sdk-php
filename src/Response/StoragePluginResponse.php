@@ -32,4 +32,5 @@ class StoragePluginResponse extends Response {
 	public function __construct(object $responseObject) {
 		parent::__construct($responseObject);
 	}
+
 }

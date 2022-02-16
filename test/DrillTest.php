@@ -139,9 +139,16 @@ class DrillTest extends TestCase {
 	}
 
 	public function testGetPluginType() {
+		$startTime = new \DateTime();
+		echo 'Start getPluginType(): ' . $startTime->format('Y-m-d H:i:s v') . "\n";
 		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$plugin_type = $dh->getPluginType('dfs');
-		$this->assertEquals('file', $plugin_type);
+		$plugin_type = $dh->getPluginType('mariadb');
+		$this->assertEquals('jdbc', $plugin_type);
+		$plugin_type = $dh->getPluginType('mdubs_postgres');
+		$this->assertEquals('jdbc', $plugin_type);
+		$endTime = new \DateTime();
+		echo 'End getPluginType(): ' . $endTime->format('Y-m-d H:i:s v') . "\n";
+		echo 'Total time: ' . $startTime->diff($endTime)->format('%Y-%m-%d %H:%i:%s %F') . "\n";
 	}
 
 	public function testGetTableNames() {
