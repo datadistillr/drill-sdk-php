@@ -730,6 +730,9 @@ class DrillConnection {
 		$specificType = $this->specificType($plugin);
 
 		$itemCount = count($pathItems);
+		if($itemCount == 1 && $pathItems[0] == '') {
+			$itemCount = 0;
+		}
 
 		if($pluginType === 'file') {
 //			$filePath = '';
