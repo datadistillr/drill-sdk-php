@@ -785,14 +785,15 @@ class DrillConnection {
 			if($finalCount > 1) {
 				$tableName = $pathItems[count($pathItems)-1];
 
-				for($i = 1; $i < count($pathItems)-2; $i++) {
+				for($i = 1; $i < count($pathItems)-1; $i++) {
 					$dbName .= '.'.$pathItems[$i];
 				}
 			}
 			elseif($finalCount == 1) {
-				for($i = 1; $i < count($pathItems)-1; $i++) {
+				for($i = 1; $i < count($pathItems); $i++) {
 					$dbName .= '.'.$pathItems[$i];
 				}
+
 				unset($tableName);
 			}
 			$this->logMessage(LogType::Info, 'DB Name: ' . $dbName);
