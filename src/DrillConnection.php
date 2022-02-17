@@ -780,6 +780,8 @@ class DrillConnection {
 			$dbName = $pathItems[0] ?? null;
 			$tableName = $pathItems[1] ?? null;
 
+			$this->logMessage(LogType::Info, 'Final Count: ' . $finalCount);
+
 			if($finalCount > 1) {
 				$tableName = $pathItems[count($pathItems)-1];
 
@@ -791,7 +793,9 @@ class DrillConnection {
 				for($i = 1; $i < count($pathItems)-1; $i++) {
 					$dbName .= '.'.$pathItems[$i];
 				}
+				unset($tableName);
 			}
+			$this->logMessage(LogType::Info, 'DB Name: ' . $dbName);
 
 			if($finalCount < 1) {
 				$list = $this->getSchemaNames($pluginName, true);
@@ -1036,7 +1040,7 @@ class DrillConnection {
 	 */
 	protected function jdbcTableOffset(string $specificType): int {
 		$level = match ($specificType) {
-			'postgres', 'bigquery' => 1,
+			'bigquery' => 1,
 			default => 0,
 		};
 		return $level;
