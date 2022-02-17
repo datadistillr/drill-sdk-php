@@ -752,7 +752,8 @@ class DrillConnection {
 			// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
 			$tableLevel = $this->jdbcTableLevel($specificType);
 
-
+			$this->logMessage(LogType::Info, "path item count: {$itemCount}");
+			$this->logMessage(LogType::Info, "table level: {$tableLevel}");
 
 			if($itemCount < 1) {
 				$list = $this->getSchemaNames($pluginName, true);
@@ -996,11 +997,10 @@ class DrillConnection {
 	 * @return int Level the table reference will be found at
 	 */
 	protected function jdbcTableLevel(string $specificType): int {
-		switch($specificType) {
-
-			default:
-				$level = 1;
-		}
+		$level = match ($specificType) {
+			'postgres', 'bigquery' => 2,
+			default => 1,
+		};
 		return $level;
 	}
 
