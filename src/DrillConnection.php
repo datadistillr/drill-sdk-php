@@ -764,10 +764,10 @@ class DrillConnection {
 			$dbName = $pathItems[0] ?? null;
 			$tableName = $pathItems[1] ?? null;
 
-			if($finalCount > 0) {
-				$tableName = $pathItems[count($pathItems)];
+			if($finalCount <= 1) {
+				$tableName = $pathItems[count($pathItems)-1];
 
-				for($i = 1; $i < count($pathItems) -1; $i++) {
+				for($i = 1; $i < count($pathItems)-2; $i++) {
 					$dbName .= '.'.$pathItems[$i];
 				}
 			}
