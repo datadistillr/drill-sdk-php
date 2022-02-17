@@ -454,6 +454,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function getSchemaNames(?string $plugin = null, bool $stripPlugin = false): ?array {
+		$this->logMessage(LogType::Query, 'Starting getSchemaNames');
 
 		if (! $this->isActive()) {
 			return null;
@@ -489,6 +490,7 @@ class DrillConnection {
 			}
 		}
 
+		$this->logMessage(LogType::Query, 'Ending getSchemaNames');
 		return $schemata;
 	}
 
@@ -566,6 +568,8 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function getTableNames(string $plugin, string $schema, ?string $pluginType = null): array {
+		$this->logMessage(LogType::Query, 'Starting getTableNames');
+
 		$cleanPlugin = str_replace('`', '', $plugin);
 		$cleanSchema = str_replace('`', '', $schema);
 
@@ -578,6 +582,8 @@ class DrillConnection {
 
 		if ($pluginType === 'file') {
 			$sql = "SELECT `FILE_NAME` FROM `INFORMATION_SCHEMA`.`files` WHERE `SCHEMA_NAME` = '{$cleanSchema}' AND `IS_FILE` = true";
+			$this->logMessage(LogType::Query, $sql);
+
 			$tables = $this->query($sql)->getRows();
 
 			foreach ($tables as $table) {
@@ -590,6 +596,8 @@ class DrillConnection {
 			}
 		} else {
 			$sql = "SELECT `TABLE_NAME` FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_SCHEMA` = '{$cleanSchema}'";
+			$this->logMessage(LogType::Query, $sql);
+
 			$tables = $this->query($sql)->getRows();
 
 			foreach ($tables as $table) {
@@ -602,6 +610,7 @@ class DrillConnection {
 			}
 		}
 
+		$this->logMessage(LogType::Query, 'Ending getTableNames');
 		return $tableNames;
 	}
 
@@ -650,6 +659,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function getColumns(string $plugin, string $schema, string $tableName, ?string $pluginType = null): array {
+		$this->logMessage(LogType::Query, 'Starting getColumns');
 
 		if(! isset($pluginType)) {
 			$pluginType = $this->getPluginType($plugin);
@@ -687,6 +697,8 @@ class DrillConnection {
 			$sql = "DESCRIBE {$quotedSchema}";
 		}
 
+		$this->logMessage(LogType::Query, $sql);
+
 		$result = $this->query($sql)->getRows();
 
 		$columns = [];
@@ -702,6 +714,8 @@ class DrillConnection {
 
 			$columns[] = new Column($data);
 		}
+
+		$this->logMessage(LogType::Query, 'Ending getColumns');
 		return $columns;
 	}
 
