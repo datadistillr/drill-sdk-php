@@ -753,12 +753,26 @@ class DrillConnection {
 		} elseif($pluginType === 'jdbc') {
 
 			// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
-			$tableLevel = $this->jdbcTableLevel($specificType);
+			$offset = $this->jdbcTableOffset($specificType);
+
 
 			$this->logMessage(LogType::Info, "path item count: {$itemCount}");
-			$this->logMessage(LogType::Info, "table level: {$tableLevel}");
+			$this->logMessage(LogType::Info, "table offset: {$offset}");
 
-			if($itemCount < 1) {
+			$finalCount = $itemCount - $offset;
+
+			$dbName = $pathItems[0] ?? null;
+			$tableName = $pathItems[1] ?? null;
+
+			if($finalCount > 0) {
+				$tableName = $pathItems[count($pathItems)];
+
+				for($i = 1; $i < count($pathItems) -1; $i++) {
+					$dbName .= '.'.$pathItems[$i];
+				}
+			}
+
+			if($finalCount < 1) {
 				$list = $this->getSchemaNames($pluginName, true);
 				$results = [];
 
@@ -766,11 +780,11 @@ class DrillConnection {
 					$results[] = new Schema(['plugin'=>$pluginName, 'name'=>$name]);
 				}
 			}
-			elseif($itemCount == 1) {
-				$results = $this->getTables($pluginName, $pathItems[0], $pluginType);
+			elseif($finalCount == 1) {
+				$results = $this->getTables($pluginName, $dbName, $pluginType);
 			}
-			elseif($itemCount == 2) {
-				$results = $this->getColumns($pluginName, $pathItems[0], $pathItems[1], $pluginType);
+			elseif($finalCount == 2) {
+				$results = $this->getColumns($pluginName, $dbName, $tableName, $pluginType);
 			}
 
 		} elseif($pluginType === 'mongo' || $pluginType === 'elastic') {
@@ -999,10 +1013,10 @@ class DrillConnection {
 	 *
 	 * @return int Level the table reference will be found at
 	 */
-	protected function jdbcTableLevel(string $specificType): int {
+	protected function jdbcTableOffset(string $specificType): int {
 		$level = match ($specificType) {
-			'postgres', 'bigquery' => 2,
-			default => 1,
+			'postgres', 'bigquery' => 1,
+			default => 0,
 		};
 		return $level;
 	}
