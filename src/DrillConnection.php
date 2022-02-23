@@ -578,7 +578,7 @@ class DrillConnection {
 		}
 		$tableNames = [];
 
-		$cleanSchema = $cleanPlugin . '.' . $cleanSchema;
+		$cleanSchema = $cleanPlugin . ($cleanSchema != '' ? '.' . $cleanSchema : '');
 
 		if ($pluginType === 'file') {
 			$sql = "SELECT `FILE_NAME` FROM `INFORMATION_SCHEMA`.`files` WHERE `SCHEMA_NAME` = '{$cleanSchema}' AND `IS_FILE` = true";
