@@ -691,21 +691,16 @@ class DrillConnection {
 			$views = $this->getViewNames($plugin, $schema);
 
 			if (in_array($tableName, $views)) {
-				$viewName = "`{$plugin}.{$schema}`.`{$tableName}`"; // NOTE: escape char ` may need to go around plugin and schema separately
-				$sql = "SELECT * FROM {$viewName} LIMIT 1";
+				$quotedFileName = "`{$plugin}.{$schema}`.`{$tableName}`"; // NOTE: escape char ` may need to go around plugin and schema separately
 			} else {
 				$quotedFileName = $this->formatDrillTable($plugin, $filePath);
-				$sql = "SELECT * FROM {$quotedFileName} LIMIT 1";
 			}
 
 			// TODO: process this to return Column[]
-			return $this->query($sql)->getSchema();
+			return $this->getFileColumns($quotedFileName);
 
-//		} else if (str_contains($table_name, "SELECT")) { // replaced with regex, str_contains is >=PHP8.0
-		} else if (preg_match('/SELECT/', $tableName)) {
-
+		} else if (str_contains($tableName, "SELECT")) { // replaced with regex, str_contains is >=PHP8.0
 			$sql = "SELECT * FROM {$tableName} LIMIT 1";
-
 		} else {
 			/*
 			 * Case for everything else.
@@ -733,6 +728,31 @@ class DrillConnection {
 		}
 
 		$this->logMessage(LogType::Query, 'Ending getColumns');
+		return $columns;
+	}
+
+	/**
+	 * Get File Columns
+	 *
+	 * @param string $fullformattedPath Full Formatted FilePath
+	 * @return array
+	 */
+	public function getFileColumns(string $fullformattedPath) {
+
+		$this->logMessage(LogType::Query, 'Starting getFileColumns');
+
+		$columns = [];
+
+		try {
+			$sql = "SELECT * FROM {$fullformattedPath} LIMIT 1";
+
+			$result = $this->query($sql)->getSchema();
+
+		} catch(\Exception $e) {
+			$this->logMessage(LogType::Error, $e->getMessage());
+		}
+
+		$this->logMessage(LogType::Query, 'Ending getFileColumns');
 		return $columns;
 	}
 
@@ -769,15 +789,33 @@ class DrillConnection {
 		switch($pluginType) {
 			case 'file':
 				$filePath = '';
+				$dirPath = '';
 				$count = 0;
+				$lastItem = '';
+
+				// Build initial path
 				foreach($pathItems as $path) {
-					if($count++ > 0) {
-						$filePath .= '.';
+					$lastItem = $path;
+					if(++$count == 1) {
+						$filePath .= "`{$path}`";
+					} elseif($count <= 2 || ($count == 3 && $itemCount == 3)) {
+						$filePath .= ".`{$path}`";
+					} else {
+						$dirPath .= $count == 3 ? $path : '/'.$path;
 					}
-					$filePath .= "`{$path}`";
+				}
+
+				// Build directory path
+				if($count > 3) {
+					$filePath .= ".`{$dirPath}`";
 				}
 
 				$results = $this->getFiles($pluginName, $filePath);
+
+				// check if submitted path is actually a file.  If so get columns
+				if($count >= 3 && count($results) == 1 && $results[0]->name == $lastItem) {
+					$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
+				}
 				break;
 			case 'jdbc':
 			case 'mongo':
