@@ -780,7 +780,7 @@ class DrillConnection {
 				$results = $this->getFiles($pluginName, $filePath);
 				break;
 			case 'jdbc':
-
+			case 'mongo':
 				// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
 				$offset = $this->jdbcTableOffset($specificType);
 
@@ -826,8 +826,6 @@ class DrillConnection {
 					$results = $this->getColumns($pluginName, $dbName, $tableName, $pluginType);
 				}
 				break;
-
-			case 'mongo':
 			case 'elastic':
 			case 'splunk':
 				if($itemCount < 1) {
