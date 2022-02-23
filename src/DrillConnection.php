@@ -638,6 +638,23 @@ class DrillConnection {
 		return $viewNames;
 	}
 
+	/**
+	 * Retrieve List of files in path
+	 *
+	 * @param string $pluginName Plugin Name
+	 * @param string $filePath File Path
+	 * @return Result[]
+	 */
+	public function getFiles(string $pluginName, string $filePath): array {
+		$this->logMessage(LogType::Request, 'Starting getFiles()');
+
+		$results = $this->query("SHOW FILES IN {$pluginName}.{$filePath}")->getRows();
+
+		$this->logMessage(LogType::Request, 'Ending getFiles()');
+
+		return $results;
+	}
+
 	// endregion
 	// region Column Methods
 
@@ -731,7 +748,6 @@ class DrillConnection {
 	 * @param string $pluginName The plugin name
 	 * @param string ...$pathItems The path to the required tree
 	 * @throws Exception
-	 * @todo Currently only works for JDBC Connection Types, Needs to be expanded for Files
 	 */
 	public function getNestedTree(string $pluginName, ...$pathItems): array {
 		$this->logMessage(LogType::Info, 'Starting getNestedTree() request.');
@@ -750,76 +766,77 @@ class DrillConnection {
 
 		$results = [];
 
-		if($pluginType === 'file') {
-//			$filePath = '';
-//			$count = 0;
-//			foreach($pathItems as $path) {
-//				if($count++ > 0) {
-//					$filePath .= '.';
-//				}
-//
-//				$filePath .= "`{$path}`";
-//			}
-//			$filePath = $plugin . '.' . $filePath;
-//
-//			$results = $this->query("SHOW FILES IN {$filePath}")->fetch_assoc();
-
-			throw new \Exception('Unsupported format');
-
-		} elseif($pluginType === 'jdbc') {
-
-			// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
-			$offset = $this->jdbcTableOffset($specificType);
-
-
-			$this->logMessage(LogType::Info, "path item count: {$itemCount}");
-			$this->logMessage(LogType::Info, "table offset: {$offset}");
-
-			$finalCount = $itemCount - $offset;
-
-			$dbName = $pathItems[0] ?? null;
-			$tableName = $pathItems[1] ?? null;
-
-			$this->logMessage(LogType::Info, 'Final Count: ' . $finalCount);
-
-			if($finalCount > 1) {
-				$tableName = $pathItems[count($pathItems)-1];
-
-				for($i = 1; $i < count($pathItems)-1; $i++) {
-					$dbName .= '.'.$pathItems[$i];
-				}
-			}
-			elseif($finalCount == 1) {
-				for($i = 1; $i < count($pathItems); $i++) {
-					$dbName .= '.'.$pathItems[$i];
+		switch($pluginType) {
+			case 'file':
+				$filePath = '';
+				$count = 0;
+				foreach($pathItems as $path) {
+					if($count++ > 0) {
+						$filePath .= '.';
+					}
+					$filePath .= "`{$path}`";
 				}
 
-				unset($tableName);
-			}
-			$this->logMessage(LogType::Info, 'DB Name: ' . $dbName);
+				$results = $this->getFiles($pluginName, $filePath);
+				break;
+			case 'jdbc':
 
-			if($finalCount < 1) {
-				$list = $this->getSchemaNames($pluginName, true);
-				$results = [];
+				// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
+				$offset = $this->jdbcTableOffset($specificType);
 
-				foreach($list as $name) {
-					$results[] = new Schema(['plugin'=>$pluginName, 'name'=>$name]);
+
+				$this->logMessage(LogType::Info, "path item count: {$itemCount}");
+				$this->logMessage(LogType::Info, "table offset: {$offset}");
+
+				$finalCount = $itemCount - $offset;
+
+				$dbName = $pathItems[0] ?? null;
+				$tableName = $pathItems[1] ?? null;
+
+				$this->logMessage(LogType::Info, 'Final Count: ' . $finalCount);
+
+				if($finalCount > 1) {
+					$tableName = $pathItems[count($pathItems)-1];
+
+					for($i = 1; $i < count($pathItems)-1; $i++) {
+						$dbName .= '.'.$pathItems[$i];
+					}
 				}
-			}
-			elseif($finalCount == 1) {
-				$results = $this->getTables($pluginName, $dbName, $pluginType);
-			}
-			elseif($finalCount == 2) {
-				$results = $this->getColumns($pluginName, $dbName, $tableName, $pluginType);
-			}
+				elseif($finalCount == 1) {
+					for($i = 1; $i < count($pathItems); $i++) {
+						$dbName .= '.'.$pathItems[$i];
+					}
 
-		} elseif($pluginType === 'mongo' || $pluginType === 'elastic') {
-			if($itemCount < 1) {
-				$results = $this->getTables($pluginName, $pathItems[0], $pluginType);
-			}
-			elseif($itemCount == 1) {
-				$results = $this->getColumns($pluginName, $pathItems[0], $pathItems[1], $pluginType);
-			}
+					unset($tableName);
+				}
+				$this->logMessage(LogType::Info, 'DB Name: ' . $dbName);
+
+				if($finalCount < 1) {
+					$list = $this->getSchemaNames($pluginName, true);
+					$results = [];
+
+					foreach($list as $name) {
+						$results[] = new Schema(['plugin'=>$pluginName, 'name'=>$name]);
+					}
+				}
+				elseif($finalCount == 1) {
+					$results = $this->getTables($pluginName, $dbName, $pluginType);
+				}
+				elseif($finalCount == 2) {
+					$results = $this->getColumns($pluginName, $dbName, $tableName, $pluginType);
+				}
+				break;
+
+			case 'mongo':
+			case 'elastic':
+			case 'splunk':
+				if($itemCount < 1) {
+					$results = $this->getTables($pluginName, $pathItems[0], $pluginType);
+				}
+				elseif($itemCount == 1) {
+					$results = $this->getColumns($pluginName, $pathItems[0], $pathItems[1], $pluginType);
+				}
+				break;
 		}
 
 		$this->logMessage(LogType::Info, 'Ending getNestedTree() request.');
