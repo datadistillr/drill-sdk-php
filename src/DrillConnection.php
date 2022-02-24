@@ -650,7 +650,7 @@ class DrillConnection {
 	public function getFiles(string $pluginName, string $filePath): array {
 		$this->logMessage(LogType::Request, 'Starting getFiles()');
 
-		$results = $this->query("SHOW FILES IN {$pluginName}.{$filePath}")->getRows();
+		$results = $this->query("SHOW FILES IN `{$pluginName}`.{$filePath}")->getRows();
 
 		$this->logMessage(LogType::Request, 'Ending getFiles()');
 
@@ -800,7 +800,7 @@ class DrillConnection {
 					$lastItem = $path;
 					if(++$count == 1) {
 						$filePath .= "`{$path}`";
-					} elseif($count <= 2 || ($count == 3 && $itemCount == 3)) {
+					} elseif($count == 2 && $itemCount == 2) {
 						$filePath .= ".`{$path}`";
 					} else {
 						$dirPath .= $count == 3 ? $path : '/'.$path;
