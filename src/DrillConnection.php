@@ -827,7 +827,7 @@ class DrillConnection {
 				$results = $this->getFiles($pluginName, $filePath);
 
 				// check if submitted path is actually a file.  If so get columns
-				if($count >= 3 && count($results) == 1 && $results[0]->name == $lastItem) {
+				if($count >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
 					$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
 				}
 				break;
