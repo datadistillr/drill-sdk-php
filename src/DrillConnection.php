@@ -39,6 +39,18 @@ class DrillConnection {
 
 	// region Properties
 	/**
+	 * File Workspace path depth
+	 * @const WORKSPACE_DEPTH
+	 */
+	const WORKSPACE_DEPTH = 1;
+
+	/**
+	 * File directory path depth
+	 * @const DIRECTORY_DEPTH
+	 */
+	const DIRECTORY_DEPTH = 2;
+
+	/**
 	 * Hostname
 	 * @var string $hostname
 	 */
@@ -798,17 +810,17 @@ class DrillConnection {
 				// Build initial path
 				foreach($pathItems as $path) {
 					$lastItem = $path;
-					if(++$count == 1) {
+					if(++$count == self::WORKSPACE_DEPTH) {
 						$filePath .= "`{$path}`";
-					} elseif($count == 2 && $itemCount == 2) {
+					} elseif($count == self::DIRECTORY_DEPTH && $itemCount == self::DIRECTORY_DEPTH) {
 						$filePath .= ".`{$path}`";
 					} else {
-						$dirPath .= $count == 3 ? $path : '/'.$path;
+						$dirPath .= $count == self::DIRECTORY_DEPTH ? $path : '/'.$path;
 					}
 				}
 
 				// Build directory path
-				if($count > 3) {
+				if($count > self::DIRECTORY_DEPTH) {
 					$filePath .= ".`{$dirPath}`";
 				}
 
