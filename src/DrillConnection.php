@@ -462,7 +462,9 @@ class DrillConnection {
 
 		$query = 'SHOW DATABASES';
 		if(isset($plugin)) {
-			$query .= " WHERE `SCHEMA_NAME` LIKE '{$plugin}.%'";
+			// fix and escape underscore characters
+			$plugin = preg_replace('/_/', '\_', $plugin);
+			$query .= " WHERE `SCHEMA_NAME` LIKE '{$plugin}.%' escape '\'";
 		}
 
 		$rawResults = $this->query($query)->getRows();
