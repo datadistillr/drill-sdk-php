@@ -760,7 +760,7 @@ class DrillConnection {
 		try {
 			$sql = "SELECT * FROM {$fullformattedPath} LIMIT 1";
 
-			$result = $this->query($sql)->getSchema();
+			$columns = $this->query($sql)->getSchema();
 
 		} catch(\Exception $e) {
 			$this->logMessage(LogType::Error, $e->getMessage());
