@@ -326,7 +326,7 @@ class DrillConnection {
 
 		$response = $this->drillRequest($url, $postData);
 
-		if (isset($response['errorMessage'])
+		if (isset($response->errorMessage)
 			|| isset($response->result) && strtolower($response->result) !== 'success'
 			|| !isset($response->result)) {
 			$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
@@ -349,7 +349,7 @@ class DrillConnection {
 
 		$response = $this->drillRequest($url);
 
-		if (isset($response['errorMessage'])
+		if (isset($response->errorMessage)
 			|| isset($response->result) && strtolower($response->result) !== 'success'
 			|| !isset($response->result)) {
 			$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
