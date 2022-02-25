@@ -327,10 +327,10 @@ class DrillConnection {
 		$response = $this->drillRequest($url, $postData);
 
 		if (isset($response['errorMessage'])
-			|| isset($response['result']) && strtolower($response['result']) !== 'success'
-			|| !isset($response['result'])) {
-			$this->errorMessage = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
-			$this->stackTrace = $response['stackTrace'] ?? '';
+			|| isset($response->result) && strtolower($response->result) !== 'success'
+			|| !isset($response->result)) {
+			$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+			$this->stackTrace = $response->stackTrace ?? '';
 			throw new Exception("Unable to save storage plugin: " . print_r($config, true));
 		} else {
 			return true;
@@ -350,10 +350,10 @@ class DrillConnection {
 		$response = $this->drillRequest($url);
 
 		if (isset($response['errorMessage'])
-			|| isset($response['result']) && strtolower($response['result']) !== 'success'
-			|| !isset($response['result'])) {
-			$this->errorMessage = $response['errorMessage'] ?? $response['result'] ?? implode('. ', $response);
-			$this->stackTrace = $response['stackTrace'] ?? '';
+			|| isset($response->result) && strtolower($response->result) !== 'success'
+			|| !isset($response->result)) {
+			$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+			$this->stackTrace = $response->stackTrace ?? '';
 			throw new Exception("Unable to delete storage plugin.");
 		} else {
 			return true;
