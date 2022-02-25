@@ -4,6 +4,8 @@ namespace datadistillr\Drill;
 
 use datadistillr\Drill\Logs\Logger;
 use datadistillr\Drill\Logs\LogType;
+use datadistillr\Drill\Request\RequestFunction;
+use datadistillr\Drill\Request\RequestType;
 use datadistillr\Drill\Request\RequestUrl;
 use datadistillr\Drill\Response\ClusterResponse;
 use datadistillr\Drill\Response\ConfirmationResponse;
@@ -166,7 +168,7 @@ class DrillConnection {
 	 */
 	public function query(string $query): ?Result {
 
-		$url = new RequestUrl('query', $this->hostname, $this->port, $this->ssl);
+		$url = new RequestUrl(RequestFunction::Query, $this->hostname, $this->port, $this->ssl);
 
 		$postData = new QueryData($query, $this->rowLimit);
 
@@ -196,7 +198,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function enablePlugin(string $plugin): bool {
-		$url = new RequestUrl('enablePlugin', $this->hostname, $this->port, $this->ssl, $plugin);
+		$url = new RequestUrl(RequestFunction::EnablePlugin, $this->hostname, $this->port, $this->ssl, $plugin);
 
 		$result = $this->drillRequest($url);
 
@@ -216,7 +218,7 @@ class DrillConnection {
 	 */
 	public function disablePlugin(string $plugin): bool {
 
-		$url = new RequestUrl('disablePlugin', $this->hostname, $this->port, $this->ssl, $plugin);
+		$url = new RequestUrl(RequestFunction::DisablePlugin, $this->hostname, $this->port, $this->ssl, $plugin);
 
 		$result = $this->drillRequest($url);
 
@@ -286,7 +288,7 @@ class DrillConnection {
 	 */
 	function getStoragePlugin(string $plugin): ?StoragePluginResponse {
 
-		$url = new RequestUrl('pluginInfo', $this->hostname, $this->port, $this->ssl, $plugin);
+		$url = new RequestUrl(RequestFunction::PluginInfo, $this->hostname, $this->port, $this->ssl, $plugin);
 
 		return new StoragePluginResponse($this->drillRequest($url));
 	}
@@ -302,7 +304,7 @@ class DrillConnection {
 	public function getStoragePlugins(): array {
 		$this->logMessage(LogType::Request, 'Starting Request to get Storage Plugins');
 
-		$url = new RequestUrl('storage', $this->hostname, $this->port, $this->ssl);
+		$url = new RequestUrl(RequestFunction::Storage, $this->hostname, $this->port, $this->ssl);
 		$storage = $this->drillRequest($url);
 
 		$this->logMessage(LogType::Request, 'Ending Request to get Storage Plugins');
@@ -318,7 +320,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function saveStoragePlugin(string $pluginName, array $config): ?bool {
-		$url = new RequestUrl('createPlugin', $this->hostname, $this->port, $this->ssl, $pluginName);
+		$url = new RequestUrl(RequestFunction::CreatePlugin, $this->hostname, $this->port, $this->ssl, $pluginName);
 
 		$postData = new PluginData($pluginName, $config);
 
@@ -343,7 +345,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function deleteStoragePlugin(string $pluginName): ?bool {
-		$url = new RequestUrl('deletePlugin', $this->hostname, $this->port, $this->ssl, $pluginName);
+		$url = new RequestUrl(RequestFunction::DeletePlugin, $this->hostname, $this->port, $this->ssl, $pluginName);
 
 		$response = $this->drillRequest($url);
 
@@ -980,7 +982,7 @@ class DrillConnection {
 	private function drillRequest(RequestUrl $url, ?RequestData $postData = null): ?Response {
 
 		$curlOptions = [
-			CURLOPT_CUSTOMREQUEST => $url->getRequestType(),
+			CURLOPT_CUSTOMREQUEST => $url->getRequestType()->value,
 			CURLOPT_RETURNTRANSFER => true
 		];
 
@@ -989,13 +991,13 @@ class DrillConnection {
 		];
 
 		switch ($url->getRequestType()) {
-			case 'GET':
+			case RequestType::GET:
 				$curlOptions[CURLOPT_HEADER] = 0;
 				break;
-			case 'POST':
+			case RequestType::POST:
 				$curlOptions[CURLOPT_POST] = true;
 				$curlOptions[CURLOPT_POSTFIELDS] = json_encode($postData);
-			case 'DELETE':
+			case RequestType::DELETE:
 				$curlOptions[CURLOPT_HTTPHEADER] = $curlHeaders;
 				break;
 			default:
@@ -1025,41 +1027,41 @@ class DrillConnection {
 		unset($response);
 
 		switch ($url->getFunction()) {
-			case 'query':
+			case RequestFunction::Query:
 				$response = new QueryResponse($result);
 				break;
-			case 'profiles':
+			case RequestFunction::Profiles:
 				$response = new ProfilesResponse($result);
 				break;
-			case 'profile':
+			case RequestFunction::Profile:
 				$response = new ProfileResponse($result);
 				break;
-			case 'deletePlugin':
-			case 'cancelProfile':
-			case 'enablePlugin':
-			case 'disablePlugin':
+			case RequestFunction::DeletePlugin:
+			case RequestFunction::CancelProfile:
+			case RequestFunction::EnablePlugin:
+			case RequestFunction::DisablePlugin:
 				$response = new ConfirmationResponse($result);
 				break;
-			case 'storage':
+			case RequestFunction::Storage:
 				$response = new StoragePluginListResponse($result);
 				break;
-			case 'createPlugin':
-			case 'pluginInfo':
+			case RequestFunction::CreatePlugin:
+			case RequestFunction::PluginInfo:
 				$response = new StoragePluginResponse($result);
 				break;
-			case 'drillbits':
+			case RequestFunction::Drillbits:
 				$response = new ClusterResponse($result);
 				break;
-			case 'status':
+			case RequestFunction::Status:
 				$response = new StatusResponse($result);
 				break;
-			case 'metrics':
+			case RequestFunction::Metrics:
 				$response = new StatusMetricsResponse($result);
 				break;
-			case 'threadStatus':
+			case RequestFunction::ThreadStatus:
 				$response = new StatusThreadsResponse($result);
 				break;
-			case 'options':
+			case RequestFunction::Options:
 				$response = new OptionsListResponse($result);
 				break;
 			default:

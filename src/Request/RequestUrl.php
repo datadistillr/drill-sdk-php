@@ -20,76 +20,76 @@ class RequestUrl {
 
 	/**
 	 * Function
-	 * @var string $function
+	 * @var RequestFunction $function
 	 */
-	protected string $function;
+	protected RequestFunction $function;
 
 	/**
 	 * Request Type
-	 * @var string $requestType
+	 * @var RequestType $requestType
 	 */
-	protected string $requestType = 'GET';
+	protected RequestType $requestType = RequestType::GET;
 
 	/**
 	 * Constructor class
 	 *
-	 * @param string $function The Function to be called
+	 * @param RequestFunction $function The Function to be called
 	 * @param string $hostname Drill Server Hostname
 	 * @param int $port Port Number [default: 8047]
 	 * @param bool $secure Make call via SSL/TLS [default: true]
 	 * @param ?string ...$items Any extra to be included [default: null]
 	 */
-	public function __construct(string $function, string $hostname, int $port = 8047, bool $secure = true, ?string ...$items) {
+	public function __construct(RequestFunction $function, string $hostname, int $port = 8047, bool $secure = true, ?string ...$items) {
 
 		$this->function = $function;
 
 		$protocol = $secure ? 'https://' : 'http://';
 
 		switch ($function) {
-			case 'query':
+			case RequestFunction::Query:
 				$path = '/query.json';
-				$this->requestType = 'POST';
+				$this->requestType = RequestType::POST;
 				break;
-			case 'profiles':
+			case RequestFunction::Profiles:
 				$path = '/profiles.json';
 				break;
-			case 'profile':
+			case RequestFunction::Profile:
 				$path = '/profiles/'.$items[0].'.json';
 				break;
-			case 'cancelProfile':
+			case RequestFunction::CancelProfile:
 				$path = '/profiles/cancel/'.$items[0];
 				break;
-			case 'storage':
+			case RequestFunction::Storage:
 				$path = '/storage.json';
 				break;
-			case 'createPlugin':
-				$this->requestType = 'POST';
-			case 'pluginInfo':
+			case RequestFunction::CreatePlugin:
+				$this->requestType = RequestType::POST;
+			case RequestFunction::PluginInfo:
 				$path = '/storage/' . $items[0] . '.json';
 				break;
-			case 'deletePlugin':
-				$this->requestType = 'DELETE';
+			case RequestFunction::DeletePlugin:
+				$this->requestType = RequestType::DELETE;
 				$path = '/storage/' . $items[0] . '.json';
 				break;
-			case 'enablePlugin':
+			case RequestFunction::EnablePlugin:
 				$path = '/storage/' . $items[0] . '/enable/true';
 				break;
-			case 'disablePlugin':
+			case RequestFunction::DisablePlugin:
 				$path = '/storage/' . $items[0] . '/enable/false';
 				break;
-			case 'drillbits':
+			case RequestFunction::Drillbits:
 				$path = '/cluster.json';
 				break;
-			case 'status':
+			case RequestFunction::Status:
 				$path = '/status';
 				break;
-			case 'metrics':
+			case RequestFunction::Metrics:
 				$path = '/status/metrics';
 				break;
-			case 'threadStatus':
+			case RequestFunction::ThreadStatus:
 				$path = '/status/threads';
 				break;
-			case 'options':
+			case RequestFunction::Options:
 				$path = '/options.json';
 				break;
 			default:
@@ -102,9 +102,9 @@ class RequestUrl {
 	/**
 	 * Get Function Value
 	 *
-	 * @return string Function value
+	 * @return RequestFunction Function value
 	 */
-	public function getFunction(): string {
+	public function getFunction(): RequestFunction {
 		return $this->function;
 	}
 
@@ -120,9 +120,9 @@ class RequestUrl {
 	/**
 	 * Get Request Type
 	 *
-	 * @return string Request Type
+	 * @return RequestType Request Type
 	 */
-	public function getRequestType(): string {
+	public function getRequestType(): RequestType {
 		return $this->requestType;
 	}
 }
