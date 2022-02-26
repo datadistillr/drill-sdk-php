@@ -4,6 +4,9 @@ namespace datadistillr\Drill;
 
 use datadistillr\Drill\Logs\Logger;
 use datadistillr\Drill\Logs\LogType;
+use datadistillr\Drill\Request\AccessTokenData;
+use datadistillr\Drill\Request\OAuthTokenData;
+use datadistillr\Drill\Request\RefreshTokenData;
 use datadistillr\Drill\Request\RequestFunction;
 use datadistillr\Drill\Request\RequestType;
 use datadistillr\Drill\Request\RequestUrl;
@@ -360,7 +363,86 @@ class DrillConnection {
 		}
 	}
 
-	/**
+    /**
+     * Update Refresh Token. Updates an HTTP storage plugin's OAuth refresh token.
+     *
+     * @param string $pluginName Storage Plugin Name
+     * @param string $refreshToken Refresh Token
+     * @return bool|null
+     * @throws Exception
+     */
+    public function updateRefreshToken(string $pluginName, string $refreshToken): ?bool {
+        $url = new RequestUrl(RequestFunction::UpdateRefreshToken, $this->hostname, $this->port, $this->ssl, $pluginName);
+
+        $postData = new RefreshTokenData($pluginName, $refreshToken);
+
+        $response = $this->drillRequest($url, $postData);
+
+        if (isset($response->errorMessage)
+            || isset($response->result) && strtolower($response->result) !== 'success'
+            || !isset($response->result)) {
+            $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+            $this->stackTrace = $response->stackTrace ?? '';
+            throw new Exception("Unable to save refresh token.");
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * Update Access Token. Updates an HTTP storage plugin's OAuth access token.
+     *
+     * @param string $pluginName Storage Plugin Name
+     * @param string $accessToken Access Token
+     * @return bool|null
+     * @throws Exception
+     */
+    public function updateAccessToken(string $pluginName, string $accessToken): ?bool {
+        $url = new RequestUrl(RequestFunction::UpdateAccessToken, $this->hostname, $this->port, $this->ssl, $pluginName);
+
+        $postData = new AccessTokenData($pluginName, $accessToken);
+
+        $response = $this->drillRequest($url, $postData);
+
+        if (isset($response->errorMessage)
+            || isset($response->result) && strtolower($response->result) !== 'success'
+            || !isset($response->result)) {
+            $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+            $this->stackTrace = $response->stackTrace ?? '';
+            throw new Exception("Unable to save access token.");
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * Update OAuth Tokens. Updates an HTTP storage plugin's OAuth tokens.
+     *
+     * @param string $pluginName Storage Plugin Name
+     * @param string $accessToken Access Token
+     * @param string $refreshToken Refresh Token
+     * @return bool|null
+     * @throws Exception
+     */
+    public function updateOAuthTokens(string $pluginName, string $accessToken, string $refreshToken): ?bool {
+        $url = new RequestUrl(RequestFunction::UpdateOAuthTokens, $this->hostname, $this->port, $this->ssl, $pluginName);
+
+        $postData = new OAuthTokenData($pluginName, $accessToken, $refreshToken);
+
+        $response = $this->drillRequest($url, $postData);
+
+        if (isset($response->errorMessage)
+            || isset($response->result) && strtolower($response->result) !== 'success'
+            || !isset($response->result)) {
+            $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+            $this->stackTrace = $response->stackTrace ?? '';
+            throw new Exception("Unable to save OAuth tokens.");
+        } else {
+            return true;
+        }
+    }
+
+    /**
 	 * Retrieves a list of storage plugins which are disabled.
 	 *
 	 * @return array List of disabled storage plugins, empty array if none
