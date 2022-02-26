@@ -6,7 +6,7 @@ namespace datadistillr\Drill\Request;
  * Access Token Data POST request object
  *
  * @author Ben Stewart <ben@datadistillr.com>
- * @since 0.7.1
+ * @since 0.6.0
  */
 class AccessTokenData extends RequestData {
 
