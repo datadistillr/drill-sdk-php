@@ -29,7 +29,7 @@ class OAuthTokenData extends RequestData {
 	public string $refreshToken;
 
     /**
-     * QueryData Constructor
+     * OAuthTokenData Constructor
      *
      * @param string $pluginName Plugin Name
      * @param string $accessToken Access Token

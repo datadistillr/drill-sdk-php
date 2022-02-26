@@ -23,7 +23,7 @@ class AccessTokenData extends RequestData {
 	public string $accessToken;
 
 	/**
-	 * QueryData Constructor
+	 * AccessTokenData Constructor
 	 *
 	 * @param string $pluginName Plugin Name
 	 * @param string $accessToken Access Token

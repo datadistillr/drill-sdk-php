@@ -23,7 +23,7 @@ class RefreshTokenData extends RequestData {
 	public string $refreshToken;
 
 	/**
-	 * QueryData Constructor
+	 * RefreshTokenData Constructor
 	 *
 	 * @param string $pluginName Plugin Name
 	 * @param string $refreshToken Refresh Token
