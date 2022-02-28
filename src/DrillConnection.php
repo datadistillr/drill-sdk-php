@@ -952,6 +952,8 @@ class DrillConnection {
 					$list = $this->getSchemaNames($pluginName, true);
 					$results = [];
 
+					$this->logMessage(LogType::Info, 'Returned a result set of size: ' . count($results));
+
 					foreach($list as $name) {
 						$results[] = new Schema(['plugin'=>$pluginName, 'name'=>$name]);
 					}
