@@ -739,6 +739,7 @@ class DrillConnection {
 	 * @param string $pluginName Plugin Name
 	 * @param string $filePath File Path
 	 * @return Result[]
+	 * @throws Exception
 	 */
 	public function getFiles(string $pluginName, string $filePath): array {
 		$this->logMessage(LogType::Request, 'Starting getFiles()');
@@ -883,29 +884,50 @@ class DrillConnection {
 
 		switch(PluginType::tryFrom($pluginType)) {
 			case PluginType::File:
-				$filePath = '';
-				$dirPath = '';
-				$count = 0;
-				$lastItem = '';
 
-				// Build initial path
-				foreach($pathItems as $path) {
-					$lastItem = $path;
-					if(++$count == self::WORKSPACE_DEPTH) {
-						$filePath .= "`{$path}`";
-					} elseif($count == self::DIRECTORY_DEPTH && $itemCount == self::DIRECTORY_DEPTH) {
-						$filePath .= ".`{$path}`";
-					} else {
-						$dirPath .= $count == self::DIRECTORY_DEPTH ? $path : '/'.$path;
+				$pathLimit = $itemCount;
+
+				do {
+					$nestedData = false;
+					$filePath = '';
+					$dirPath = '';
+					$count = 0;
+					$lastItem = '';
+
+					// Build initial path
+					foreach ($pathItems as $path) {
+						// check if we have hit the limit
+						if(++$count == $pathLimit) {
+							break;
+						}
+
+						$lastItem = $path;
+						if ($count == self::WORKSPACE_DEPTH) {
+							$filePath .= "`{$path}`";
+						} elseif ($count == self::DIRECTORY_DEPTH && $itemCount == self::DIRECTORY_DEPTH) {
+							$filePath .= ".`{$path}`";
+						} else {
+							$dirPath .= $count == self::DIRECTORY_DEPTH ? $path : '/' . $path;
+						}
 					}
-				}
 
-				// Build directory path
-				if($count > self::DIRECTORY_DEPTH) {
-					$filePath .= ".`{$dirPath}`";
-				}
+					// Build directory path
+					if ($count > self::DIRECTORY_DEPTH) {
+						$filePath .= ".`{$dirPath}`";
+					}
 
-				$results = $this->getFiles($pluginName, $filePath);
+					try {
+						$results = $this->getFiles($pluginName, $filePath);
+					} catch (Exception $e) {
+
+						$this->logMessage(LogType::Warning, 'Get Files Error: '. $e->getMessage());
+
+						// TODO: check if error is a result of attempting to grab a file that should have been nested data.
+						$nestedData = true;
+						$pathLimit--;
+					}
+
+				} while ($nestedData && $pathLimit > self::DIRECTORY_DEPTH);
 
 				// check if submitted path is actually a file.  If so get columns
 				if($count >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
