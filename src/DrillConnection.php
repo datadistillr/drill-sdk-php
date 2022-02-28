@@ -559,8 +559,9 @@ class DrillConnection {
 		$query = 'SHOW DATABASES';
 		if(isset($pluginName)) {
 			// fix and escape underscore characters
-			$pluginName = preg_replace('/_/', '\_', $pluginName);
-			$query .= " WHERE `SCHEMA_NAME` LIKE '{$pluginName}%' escape '\'"; // This should have a period (.) after the plugin name {$pluginName}.%  but it has been removed to address a bug in Drill
+			$escapedPluginName = preg_replace('/_/', '\_', $pluginName);
+			$query .= " WHERE `SCHEMA_NAME` LIKE '{$escapedPluginName}%' escape '\'"; // This should have a period (.) after the plugin name {$pluginName}.%  but it has been removed to address a bug in Drill
+			unset($escapedPluginName);
 		}
 
 		$rawResults = $this->query($query)->getRows();
@@ -573,12 +574,7 @@ class DrillConnection {
 		// TODO: strip tables as well.
 		foreach ($rawResults as $result) {
 			$schema = $result->SCHEMA_NAME;
-			if ($schema != 'cp.default' &&
-				$schema != 'INFORMATION_SCHEMA' &&
-				$schema != 'information_schema' &&
-				$schema != 'dfs.default' &&
-				$schema != 'sys' &&
-				str_starts_with($schema, $pluginName.'.' )) { // NOTE: this technically replaces all the prior checks, however it is a bit of a hack and should be removed when drill is fixed.
+			if (str_starts_with($schema, $pluginName.'.' )) { // NOTE: this technically replaces all the prior checks, however it is a bit of a hack and should be removed when drill is fixed.
 				$schemata[] = $schema;
 			}
 		}
