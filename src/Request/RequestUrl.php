@@ -77,6 +77,18 @@ class RequestUrl {
 			case RequestFunction::DisablePlugin:
 				$path = '/storage/' . $items[0] . '/enable/false';
 				break;
+			case RequestFunction::UpdateRefreshToken:
+				$path = '/storage/' . $items[0] . '/update_refresh_token';
+                $this->requestType = RequestType::POST;
+				break;
+			case RequestFunction::UpdateAccessToken:
+                $this->requestType = RequestType::POST;
+				$path = '/storage/' . $items[0] . '/update_access_token';
+				break;
+			case RequestFunction::UpdateOAuthTokens:
+                $this->requestType = RequestType::POST;
+				$path = '/storage/' . $items[0] . '/update_oauth_tokens';
+				break;
 			case RequestFunction::Drillbits:
 				$path = '/cluster.json';
 				break;

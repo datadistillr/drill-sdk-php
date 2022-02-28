@@ -20,6 +20,9 @@ enum RequestFunction: string {
 	case DeletePlugin = 'deletePlugin';
 	case EnablePlugin = 'enablePlugin';
 	case DisablePlugin = 'disablePlugin';
+	case UpdateRefreshToken = 'updateRefreshToken';
+    case UpdateAccessToken = 'updateAccessToken';
+    case UpdateOAuthTokens = 'updateOAuthTokens';
 	case Drillbits =  'drillbits';
 	case Status = 'status';
 	case Metrics = 'metrics';
