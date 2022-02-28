@@ -333,7 +333,7 @@ class DrillConnection {
 			|| isset($response->result) && strtolower($response->result) !== 'success'
 			|| !isset($response->result)) {
 			$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-			$this->stackTrace = $response->stackTrace ?? '';
+			$this->stackTrace = $response->stackTrace ?? [];
 			throw new Exception("Unable to save storage plugin: " . print_r($config, true));
 		} else {
 			return true;
@@ -356,7 +356,7 @@ class DrillConnection {
 			|| isset($response->result) && strtolower($response->result) !== 'success'
 			|| !isset($response->result)) {
 			$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-			$this->stackTrace = $response->stackTrace ?? '';
+			$this->stackTrace = $response->stackTrace ?? [];
 			throw new Exception("Unable to delete storage plugin.");
 		} else {
 			return true;
@@ -382,7 +382,7 @@ class DrillConnection {
             || isset($response->result) && strtolower($response->result) !== 'success'
             || !isset($response->result)) {
             $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-            $this->stackTrace = $response->stackTrace ?? '';
+            $this->stackTrace = $response->stackTrace ?? [];
             throw new Exception("Unable to save refresh token.");
         } else {
             return true;
@@ -408,7 +408,7 @@ class DrillConnection {
             || isset($response->result) && strtolower($response->result) !== 'success'
             || !isset($response->result)) {
             $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-            $this->stackTrace = $response->stackTrace ?? '';
+            $this->stackTrace = $response->stackTrace ?? [];
             throw new Exception("Unable to save access token.");
         } else {
             return true;
@@ -435,7 +435,7 @@ class DrillConnection {
             || isset($response->result) && strtolower($response->result) !== 'success'
             || !isset($response->result)) {
             $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-            $this->stackTrace = $response->stackTrace ?? '';
+            $this->stackTrace = $response->stackTrace ?? [];
             throw new Exception("Unable to save OAuth tokens.");
         } else {
             return true;
