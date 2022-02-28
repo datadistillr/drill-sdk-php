@@ -560,7 +560,7 @@ class DrillConnection {
 		if(isset($pluginName)) {
 			// fix and escape underscore characters
 			$pluginName = preg_replace('/_/', '\_', $pluginName);
-			$query .= " WHERE `SCHEMA_NAME` LIKE '{$pluginName}%' escape '\'"; // This should have a . after the plugin name {$pluginName}.%  but it has been removed to address a bug in Drill
+			$query .= " WHERE `SCHEMA_NAME` LIKE '{$pluginName}%' escape '\'"; // This should have a period (.) after the plugin name {$pluginName}.%  but it has been removed to address a bug in Drill
 		}
 
 		$rawResults = $this->query($query)->getRows();
