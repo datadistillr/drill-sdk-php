@@ -544,12 +544,12 @@ class DrillConnection {
 	/**
 	 * Retrieves list of enabled schemata names
 	 *
-	 * @param ?string $plugin Optional plugin name [default: null]
+	 * @param ?string $pluginName Optional plugin name [default: null]
 	 * @param bool $stripPlugin Strip Plugin name from returned values [default: false]
 	 * @return ?array A list of enabled schemata, null on error
 	 * @throws Exception
 	 */
-	public function getSchemaNames(?string $plugin = null, bool $stripPlugin = false): ?array {
+	public function getSchemaNames(?string $pluginName = null, bool $stripPlugin = false): ?array {
 		$this->logMessage(LogType::Query, 'Starting getSchemaNames');
 
 		if (! $this->isActive()) {
@@ -557,10 +557,11 @@ class DrillConnection {
 		}
 
 		$query = 'SHOW DATABASES';
-		if(isset($plugin)) {
+		if(isset($pluginName)) {
 			// fix and escape underscore characters
-			$plugin = preg_replace('/_/', '\_', $plugin);
-			$query .= " WHERE `SCHEMA_NAME` LIKE '{$plugin}.%' escape '\'";
+			$escapedPluginName = preg_replace('/_/', '\_', $pluginName);
+			$query .= " WHERE `SCHEMA_NAME` LIKE '{$escapedPluginName}%' escape '\'"; // This should have a period (.) after the plugin name {$pluginName}.%  but it has been removed to address a bug in Drill
+			unset($escapedPluginName);
 		}
 
 		$rawResults = $this->query($query)->getRows();
@@ -573,18 +574,14 @@ class DrillConnection {
 		// TODO: strip tables as well.
 		foreach ($rawResults as $result) {
 			$schema = $result->SCHEMA_NAME;
-			if ($schema != 'cp.default' &&
-				$schema != 'INFORMATION_SCHEMA' &&
-				$schema != 'information_schema' &&
-				$schema != 'dfs.default' &&
-				$schema != 'sys') {
+			if (str_starts_with($schema, $pluginName.'.' )) { // NOTE: this technically replaces all the prior checks, however it is a bit of a hack and should be removed when drill is fixed.
 				$schemata[] = $schema;
 			}
 		}
 
 		if($stripPlugin) {
 			foreach($schemata as &$schema) {
-				$schema = preg_replace("/^{$plugin}\./", '', $schema);
+				$schema = preg_replace("/^{$pluginName}\./", '', $schema);
 			}
 		}
 
@@ -742,6 +739,7 @@ class DrillConnection {
 	 * @param string $pluginName Plugin Name
 	 * @param string $filePath File Path
 	 * @return Result[]
+	 * @throws Exception
 	 */
 	public function getFiles(string $pluginName, string $filePath): array {
 		$this->logMessage(LogType::Request, 'Starting getFiles()');
@@ -884,39 +882,60 @@ class DrillConnection {
 
 		$results = [];
 
-		switch($pluginType) {
-			case 'file':
-				$filePath = '';
-				$dirPath = '';
-				$count = 0;
-				$lastItem = '';
+		switch(PluginType::tryFrom($pluginType)) {
+			case PluginType::File:
 
-				// Build initial path
-				foreach($pathItems as $path) {
-					$lastItem = $path;
-					if(++$count == self::WORKSPACE_DEPTH) {
-						$filePath .= "`{$path}`";
-					} elseif($count == self::DIRECTORY_DEPTH && $itemCount == self::DIRECTORY_DEPTH) {
-						$filePath .= ".`{$path}`";
-					} else {
-						$dirPath .= $count == self::DIRECTORY_DEPTH ? $path : '/'.$path;
+				$pathLimit = $itemCount;
+
+				do {
+					$nestedData = false;
+					$filePath = '';
+					$dirPath = '';
+					$count = 0;
+					$lastItem = '';
+
+					// Build initial path
+					foreach ($pathItems as $path) {
+						// check if we have hit the limit
+						if(++$count > $pathLimit) {
+							break;
+						}
+
+						$lastItem = $path;
+						if ($count == self::WORKSPACE_DEPTH) {
+							$filePath .= "`{$path}`";
+						} elseif ($count == self::DIRECTORY_DEPTH && $itemCount == self::DIRECTORY_DEPTH) {
+							$filePath .= ".`{$path}`";
+						} else {
+							$dirPath .= $count == self::DIRECTORY_DEPTH ? $path : '/' . $path;
+						}
 					}
-				}
 
-				// Build directory path
-				if($count > self::DIRECTORY_DEPTH) {
-					$filePath .= ".`{$dirPath}`";
-				}
+					// Build directory path
+					if ($count > self::DIRECTORY_DEPTH) {
+						$filePath .= ".`{$dirPath}`";
+					}
 
-				$results = $this->getFiles($pluginName, $filePath);
+					try {
+						$results = $this->getFiles($pluginName, $filePath);
+					} catch (Exception $e) {
+
+						$this->logMessage(LogType::Warning, 'Get Files Error: '. $e->getMessage());
+
+						// TODO: check if error is a result of attempting to grab a file that should have been nested data.
+						$nestedData = true;
+						$pathLimit--;
+					}
+
+				} while ($nestedData && $pathLimit > self::DIRECTORY_DEPTH);
 
 				// check if submitted path is actually a file.  If so get columns
 				if($count >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
 					$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
 				}
 				break;
-			case 'jdbc':
-			case 'mongo':
+			case PluginType::JDBC:
+			case PluginType::Mongo:
 				// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
 				$offset = $this->jdbcTableOffset($specificType);
 
@@ -951,6 +970,8 @@ class DrillConnection {
 					$list = $this->getSchemaNames($pluginName, true);
 					$results = [];
 
+					$this->logMessage(LogType::Info, 'Returned a result set of size: ' . count($results));
+
 					foreach($list as $name) {
 						$results[] = new Schema(['plugin'=>$pluginName, 'name'=>$name]);
 					}
@@ -962,8 +983,8 @@ class DrillConnection {
 					$results = $this->getColumns($pluginName, $dbName, $tableName, $pluginType);
 				}
 				break;
-			case 'elastic':
-			case 'splunk':
+			case PluginType::Elastic:
+			case PluginType::Splunk:
 				if($itemCount < 1) {
 					$results = $this->getTables($pluginName, $pathItems[0], $pluginType);
 				}
@@ -971,6 +992,8 @@ class DrillConnection {
 					$results = $this->getColumns($pluginName, $pathItems[0], $pathItems[1], $pluginType);
 				}
 				break;
+			default:
+
 		}
 
 		$this->logMessage(LogType::Info, 'Ending getNestedTree() request.');
@@ -1161,8 +1184,8 @@ class DrillConnection {
 	 * @return ?String Plugin type
 	 */
 	protected function specificType(StoragePluginResponse $plugin): ?string {
-		switch($plugin->config->type) {
-			case 'jdbc':
+		switch(PluginType::tryFrom($plugin->config->type)) {
+			case PluginType::JDBC:
 				$matches = [];
 				if(preg_match('/(?<=jdbc:)(\w+?)(?=:\/\/.*)/', $plugin->config->url, $matches)) {
 					$type = $matches[1];
@@ -1171,9 +1194,9 @@ class DrillConnection {
 					$type = null;
 				}
 				break;
-			case 'file':
-			case 'mongo':
-			case 'elastic':
+			case PluginType::File:
+			case PluginType::Mongo:
+			case PluginType::Elastic:
 				$type = $plugin->config->type;
 				break;
 			default:
