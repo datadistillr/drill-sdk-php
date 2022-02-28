@@ -897,7 +897,7 @@ class DrillConnection {
 					// Build initial path
 					foreach ($pathItems as $path) {
 						// check if we have hit the limit
-						if(++$count == $pathLimit) {
+						if(++$count > $pathLimit) {
 							break;
 						}
 
