@@ -895,8 +895,8 @@ class DrillConnection {
 					$dirPath = '';
 					$count = 0;
 					$lastItem = '';
-					$prevItem = '';
-					$prevResults = '';
+					$prevItem = null;
+					$prevResults = null;
 
 					// Build initial path
 					foreach ($pathItems as $path) {
@@ -935,7 +935,7 @@ class DrillConnection {
 						// TODO: check if error is a result of attempting to grab a file that should have been nested data.
 						$nestedData = true;
 						$pathLimit--;
-					} elseif (count($results) > 1 || (count($results) == 1 && $results[0]->name == $prevItem)) {
+					} elseif (isset($prevResults) && (count($results) > 1 || (count($results) == 1 && $results[0]->name == $prevItem))) {
 						// original values were valid.
 						$this->logMessage(LogType::Info, 'Reverting back to previous value.');
 						$lastItem = $prevItem;
