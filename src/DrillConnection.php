@@ -994,7 +994,7 @@ class DrillConnection {
 				}
 				break;
 			default:
-
+				$this->logMessage(LogType::Warning, 'Unsupported Plugin Type');
 		}
 
 		$this->logMessage(LogType::Info, 'Ending getNestedTree() request.');
