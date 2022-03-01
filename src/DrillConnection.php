@@ -917,6 +917,7 @@ class DrillConnection {
 					}
 
 					try {
+						$this->logMessage(LogType::Info, 'Calling Get Files');
 						$results = $this->getFiles($pluginName, $filePath);
 					} catch (Exception $e) {
 
