@@ -895,6 +895,8 @@ class DrillConnection {
 					$dirPath = '';
 					$count = 0;
 					$lastItem = '';
+					$prevItem = '';
+					$prevResults = '';
 
 					// Build initial path
 					foreach ($pathItems as $path) {
@@ -918,20 +920,28 @@ class DrillConnection {
 						$filePath .= ".`{$dirPath}`";
 					}
 
-					try {
-						$this->logMessage(LogType::Info, 'Calling Get Files');
-						$results = $this->getFiles($pluginName, $filePath);
+					$this->logMessage(LogType::Info, 'Calling Get Files');
+					$results = $this->getFiles($pluginName, $filePath);
 
-						$this->logMessage(LogType::Info, 'getFiles Results: ' . print_r($results, true));
+					$this->logMessage(LogType::Info, 'getFiles Results: ' . print_r($results, true));
 
-					} catch (Exception $e) {
+					// if no results, question...
+					if (count($results) == 0) {
 
-						$this->logMessage(LogType::Warning, 'Get Files Error: '. $e->getMessage());
+						$this->logMessage(LogType::Warning, 'No results, check one level up.');
 
+						$prevItem = $lastItem;
+						$prevResults = $results;
 						// TODO: check if error is a result of attempting to grab a file that should have been nested data.
 						$nestedData = true;
 						$pathLimit--;
+					} elseif (count($results) > 1 || (count($results) == 1 && $results[0]->name == $prevItem)) {
+						// original values were valid.
+						$this->logMessage(LogType::Info, 'Reverting back to previous value.');
+						$lastItem = $prevItem;
+						$results = $prevResults;
 					}
+
 
 				} while ($nestedData && $pathLimit > self::DIRECTORY_DEPTH);
 
