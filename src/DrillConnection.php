@@ -182,11 +182,13 @@ class DrillConnection {
 		}
 
 		if (isset($response->errorMessage)) {
-			$this->errorMessage = $response->errorMessage;
-			$this->stackTrace = $response->stackTrace ?? '';
+			$this->logMessage(LogType::Error, $response->errorMessage);
+			$this->logMessage(LogType::StackTrace, $response->stackTrace ?? '');
 			throw new Exception("Error in query: {$query}");
 		} else {
-			return new Result($response, $query, $url);
+			$result = new Result($response, $query, $url);
+			$this->logMessage(LogType::Query, 'Query Result: '. print_r($result, true));
+			return $result;
 		}
 
 	}
