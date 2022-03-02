@@ -46,6 +46,7 @@ class RequestUrl {
 		$protocol = $secure ? 'https://' : 'http://';
 
 		switch ($function) {
+			case RequestFunction::MapQuery:
 			case RequestFunction::Query:
 				$path = '/query.json';
 				$this->requestType = RequestType::POST;
