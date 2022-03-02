@@ -976,7 +976,6 @@ class DrillConnection {
 
 					} elseif ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
 						// check if submitted path is actually a file.  If so get columns
-						$this->logMessage(LogType::Info, 'Calling getFileColumns()');
 						$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
 					}
 
