@@ -737,18 +737,23 @@ class DrillConnection {
 	 * Retrieve the View Names
 	 *
 	 * @param string $plugin Plugin/Datasource to retrieve view names from
-	 * @param string $schema Schema to retrieve view names from
+	 * @param ?string $schema Schema to retrieve view names from
 	 *
 	 * @return ?array List of names or null if error
 	 * @throws Exception
 	 */
-	public function getViewNames(string $plugin, string $schema): ?array {
+	public function getViewNames(string $plugin, ?string $schema): ?array {
 		if (!$this->isActive()) {
 			return null;
 		}
 
+		$pluginSchema = $plugin;
+		if(isset($schema)) {
+			$pluginSchema .= '.'.$schema;
+		}
+
 		$viewNames = [];
-		$sql = "SELECT `TABLE_NAME` FROM INFORMATION_SCHEMA.views WHERE `table_schema`='{$plugin}.{$schema}'";
+		$sql = "SELECT `TABLE_NAME` FROM INFORMATION_SCHEMA.views WHERE `table_schema`='{$pluginSchema}'";
 		$results = $this->query($sql)->getRows();
 
 		foreach ($results as $result) {
@@ -788,21 +793,26 @@ class DrillConnection {
 	 * If the data is a database, we can use the DESCRIBE TABLE command to access schema information.
 	 *
 	 * @param string $plugin The plugin name
-	 * @param string $schema The schema name
+	 * @param ?string $schema The schema name
 	 * @param string $tableName The table or file name
 	 * @param ?string $pluginType Plugin Type [default: null]
 	 *
 	 * @return Column[] List of columns present
 	 * @throws Exception
 	 */
-	public function getColumns(string $plugin, string $schema, string $tableName, ?string $pluginType = null): array {
+	public function getColumns(string $plugin, ?string $schema, string $tableName, ?string $pluginType = null): array {
 		$this->logMessage(LogType::Query, 'Starting getColumns');
 
 		if(! isset($pluginType)) {
 			$pluginType = $this->getPluginType($plugin);
 		}
 
-		$filePath = "{$schema}.{$tableName}";
+		$filePath = '';
+		if(isset($schema)) {
+			$filePath = $schema . '.';
+		}
+
+		$filePath .= $tableName;
 
 		// Since MongoDB uses the ** notation, bypass that and query the data directly
 		// TODO: Add API functionality here as well
@@ -810,8 +820,13 @@ class DrillConnection {
 
 			$views = $this->getViewNames($plugin, $schema);
 
+			$pluginSchema = $plugin;
+			if(isset($schema)) {
+				$pluginSchema .= '.'.$schema;
+			}
+
 			if (in_array($tableName, $views)) {
-				$quotedFileName = "`{$plugin}.{$schema}`.`{$tableName}`"; // NOTE: escape char ` may need to go around plugin and schema separately
+				$quotedFileName = "`{$pluginSchema}`.`{$tableName}`"; // NOTE: escape char ` may need to go around plugin and schema separately
 			} else {
 				$quotedFileName = $this->formatDrillTable($plugin, $filePath);
 			}
@@ -1044,7 +1059,7 @@ class DrillConnection {
 					$results = $this->getTables($pluginName, $pathItems[0], $pluginType);
 				}
 				elseif($itemCount == 1) {
-					$results = $this->getColumns($pluginName, $pathItems[0], $pathItems[1], $pluginType);
+					$results = $this->getColumns($pluginName, null, $pathItems[0], $pluginType);
 				}
 				break;
 			default:
@@ -1277,6 +1292,7 @@ class DrillConnection {
 	protected function jdbcTableOffset(string $specificType): int {
 		$level = match ($specificType) {
 			'bigquery' => 1,
+			'mssql' => -1,
 			default => 0,
 		};
 		return $level;
