@@ -16,6 +16,7 @@ use datadistillr\Drill\Response\OptionsListResponse;
 use datadistillr\Drill\Response\ProfileResponse;
 use datadistillr\Drill\Response\ProfilesResponse;
 use datadistillr\Drill\Response\QueryResponse;
+use datadistillr\Drill\Response\RawResponse;
 use datadistillr\Drill\Response\Response;
 use datadistillr\Drill\Request\PluginData;
 use datadistillr\Drill\Request\QueryData;
@@ -31,6 +32,7 @@ use datadistillr\Drill\ResultSet\Schema;
 use datadistillr\Drill\ResultSet\Table;
 use Error;
 use Exception;
+use function PHPUnit\Framework\isEmpty;
 
 /**
  * @package datadistillr\drill-sdk-php
@@ -165,13 +167,14 @@ class DrillConnection {
 	 * Executes a Drill query.
 	 *
 	 * @param string $query The query to run/execute
+	 * @param RequestFunction $function Fuction to run [Default: RequestFunction::Query]
 	 *
 	 * @return ?Result Returns Result object if the query executed successfully, null otherwise.
 	 * @throws Exception
 	 */
-	public function query(string $query): ?Result {
+	public function query(string $query, RequestFunction $function = RequestFunction::Query): ?Result {
 
-		$url = new RequestUrl(RequestFunction::Query, $this->hostname, $this->port, $this->ssl);
+		$url = new RequestUrl($function, $this->hostname, $this->port, $this->ssl);
 
 		$postData = new QueryData($query, $this->rowLimit);
 
@@ -192,6 +195,7 @@ class DrillConnection {
 		}
 
 	}
+
 
 	// region Plugin Methods
 
@@ -854,6 +858,35 @@ class DrillConnection {
 		return $columns;
 	}
 
+	/**
+	 * Get Complex maps
+	 *
+	 * @param string $filePath File Path
+	 * @param string $mapPath Map Path
+	 * @return array
+	 */
+	public function getComplexMaps(string $filePath, string $mapPath): array {
+
+		$this->logMessage(LogType::Query, 'Starting getComplexMaps');
+
+		$columns = [];
+
+		try {
+			$sql = "SELECT getMapSchema(d.`{$mapPath}`) FROM {$filePath} AS d LIMIT 1";
+
+			$responseData = $this->query($sql, RequestFunction::MapQuery);
+
+			foreach($responseData as $key=>$value) {
+				$columns[$key] = $value;
+			}
+
+		} catch(\Exception $e) {
+			$this->logMessage(LogType::Error, $e->getMessage());
+		}
+
+		$this->logMessage(LogType::Query, 'Ending getComplexMaps');
+		return $columns;
+	}
 	// endregion
 	// region Path Method(s)
 
@@ -891,34 +924,12 @@ class DrillConnection {
 
 				do {
 					$nestedData = false;
-					$filePath = '';
-					$dirPath = '';
-					$count = 0;
 					$lastItem = '';
 					$prevItem = null;
 					$prevResults = null;
 
-					// Build initial path
-					foreach ($pathItems as $path) {
-						// check if we have hit the limit
-						if(++$count > $pathLimit) {
-							break;
-						}
-
-						$lastItem = $path;
-						if ($count == self::WORKSPACE_DEPTH) {
-							$filePath .= "`{$path}`";
-						} elseif ($count == self::DIRECTORY_DEPTH && $itemCount == self::DIRECTORY_DEPTH) {
-							$filePath .= ".`{$path}`";
-						} else {
-							$dirPath .= $count == self::DIRECTORY_DEPTH ? $path : '/' . $path;
-						}
-					}
-
-					// Build directory path
-					if ($count > self::DIRECTORY_DEPTH) {
-						$filePath .= ".`{$dirPath}`";
-					}
+					// build the full path
+					[$filePath, $remaining] = $this->buildFilePath($pathItems, $pathLimit);
 
 					$this->logMessage(LogType::Info, 'Calling Get Files');
 					$results = $this->getFiles($pluginName, $filePath);
@@ -932,7 +943,7 @@ class DrillConnection {
 
 						$prevItem = $lastItem;
 						$prevResults = $results;
-						// TODO: check if error is a result of attempting to grab a file that should have been nested data.
+						// check if error is a result of attempting to grab a file that should have been nested data.
 						$nestedData = true;
 						$pathLimit--;
 					} elseif (isset($prevResults) && (count($results) > 1 || (count($results) == 1 && $results[0]->name == $prevItem))) {
@@ -940,15 +951,26 @@ class DrillConnection {
 						$this->logMessage(LogType::Info, 'Reverting back to previous value.');
 						$lastItem = $prevItem;
 						$results = $prevResults;
+
+						// TODO: fix possible bug on items where nested folders of the same name may give false positive
+					} elseif (isset($prevResults) && count($results) == 1 && $results[0]->name == $lastItem) {
+						// Found file... now checking for nested data
+						$results = $this->getComplexMaps($filePath, $remaining);
+
+					} elseif ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
+						// check if submitted path is actually a file.  If so get columns
+						$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
+					} else {
+						// results are not valid set results as empty array, should never get here.  Just failing gracefully.
+						$this->logMessage(LogType::Error, 'Invalid Result set');
+						$results = [];
+
 					}
 
 
 				} while ($nestedData && $pathLimit > self::DIRECTORY_DEPTH);
 
-				// check if submitted path is actually a file.  If so get columns
-				if($count >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
-					$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
-				}
+
 				break;
 			case PluginType::JDBC:
 			case PluginType::Mongo:
@@ -1148,6 +1170,8 @@ class DrillConnection {
 		unset($response);
 
 		switch ($url->getFunction()) {
+			case RequestFunction::MapQuery:
+				$response = new RawResponse($result);
 			case RequestFunction::Query:
 				$response = new QueryResponse($result);
 				break;
@@ -1235,6 +1259,46 @@ class DrillConnection {
 			default => 0,
 		};
 		return $level;
+	}
+
+	/**
+	 * Build File path
+	 *
+	 * @param String[] $pathItems Path Items
+	 * @param ?int $limit Path Item limit
+	 * @return array File Path String [$filePath, $remaining]
+	 */
+	protected function buildFilePath(array $pathItems, ?int $limit = null): array {
+		// Build initial path
+		$count = 0;
+		$itemCount = count($pathItems);
+		$filePath = '';
+		$dirPath = '';
+		$remaining = '';
+
+		foreach ($pathItems as $path) {
+			// check if we have hit the limit
+			if(isset($limit) && ++$count > $limit) {
+				$remaining .= isEmpty($remaining) ? $remaining : '/'.$remaining;
+				continue;
+			}
+
+			$lastItem = $path;
+			if ($count == self::WORKSPACE_DEPTH) {
+				$filePath .= "`{$path}`";
+			} elseif ($count == self::DIRECTORY_DEPTH && $itemCount == self::DIRECTORY_DEPTH) {
+				$filePath .= ".`{$path}`";
+			} else {
+				$dirPath .= $count == self::DIRECTORY_DEPTH ? $path : '/' . $path;
+			}
+		}
+
+		// Build directory path
+		if ($count > self::DIRECTORY_DEPTH) {
+			$filePath .= ".`{$dirPath}`";
+		}
+
+		return [$filePath, $remaining];
 	}
 
 

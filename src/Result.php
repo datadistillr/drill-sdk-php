@@ -185,58 +185,5 @@ class Result {
 		return self::cleanDataTypeName($dataType);
 	}
 
-
-	/**
-	 * Return Schema
-	 *
-	 * @return array
-	 * @deprecated v0.6.0 use getSchema()
-	 */
-	function get_schema() {
-		return $this->getSchema();
-	}
-
-
-
-	/**
-	 * Fetch column names from results
-	 *
-	 * @return array
-	 * @deprecated v0.6.0 use getColumns()
-	 */
-	function fetch_columns(): array {
-		return $this->getColumns();
-	}
-
-	/**
-	 * Get number of fields
-	 *
-	 * @return int Number of fields
-	 * @deprecated v0.6.0 use fieldCount()
-	 */
-	function field_count(): int {
-		return $this->fieldCount();
-	}
-
-	/**
-	 * Retrieve the number of resulting rows
-	 *
-	 * @return int Number of Rows
-	 * @deprecated v0.6.0 use numRows()
-	 */
-	function num_rows(): int {
-		return $this->numRows();
-	}
-
-	/**
-	 * Check if there are results beyond the current row index
-	 *
-	 * @return bool
-	 * @deprecated v0.6.0 use hasMoreResults()
-	 */
-	function more_results() {
-		return $this->hasMoreResults();
-	}
-
 	// endregion
 }

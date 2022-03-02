@@ -11,6 +11,7 @@ namespace datadistillr\Drill\Request;
  */
 enum RequestFunction: string {
 	case Query = 'query';
+	case MapQuery = 'mapQuery';
 	case Profiles = 'profiles';
 	case Profile = 'profile';
 	case CancelProfile = 'cancelProfile';
