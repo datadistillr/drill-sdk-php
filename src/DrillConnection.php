@@ -942,12 +942,11 @@ class DrillConnection {
 
 				do {
 					$nestedData = false;
-					$lastItem = '';
 					$prevItem = null;
 					$prevResults = null;
 
 					// build the full path
-					[$filePath, $remaining] = $this->buildFilePath($pathItems, $pathLimit);
+					[$filePath, $remaining, $lastItem] = $this->buildFilePath($pathItems, $pathLimit);
 
 					$this->logMessage(LogType::Info, 'Calling Get Files');
 					$results = $this->getFiles($pluginName, $filePath);
@@ -977,6 +976,7 @@ class DrillConnection {
 
 					} elseif ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
 						// check if submitted path is actually a file.  If so get columns
+						$this->logMessage(LogType::Info, 'Calling getFileColumns()');
 						$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
 					}
 
@@ -1315,7 +1315,7 @@ class DrillConnection {
 			$filePath .= ".`{$dirPath}`";
 		}
 
-		return [$filePath, $remaining];
+		return [$filePath, $remaining, $lastItem];
 	}
 
 
