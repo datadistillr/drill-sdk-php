@@ -1020,11 +1020,18 @@ class DrillConnection {
 
 				$this->logMessage(LogType::Info, 'Final Count: ' . $finalCount);
 
+				// TODO: clean this up to work better with the offset value
 				if($finalCount > 1) {
 					$tableName = $pathItems[count($pathItems)-1];
 
-					for($i = 1; $i < count($pathItems)-1; $i++) {
-						$dbName .= '.'.$pathItems[$i];
+					if($finalCount == 2 && $finalCount == count($pathItems) + 1) {
+						// There is no db for this senario
+						unset($dbName);
+					}
+					else {
+						for ($i = 1; $i < count($pathItems) - 1; $i++) {
+							$dbName .= '.' . $pathItems[$i];
+						}
 					}
 				}
 				elseif($finalCount == 1) {
