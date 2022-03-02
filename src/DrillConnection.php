@@ -794,13 +794,13 @@ class DrillConnection {
 	 *
 	 * @param string $plugin The plugin name
 	 * @param ?string $schema The schema name
-	 * @param string $tableName The table or file name
+	 * @param ?string $tableName The table or file name
 	 * @param ?string $pluginType Plugin Type [default: null]
 	 *
 	 * @return Column[] List of columns present
 	 * @throws Exception
 	 */
-	public function getColumns(string $plugin, ?string $schema, string $tableName, ?string $pluginType = null): array {
+	public function getColumns(string $plugin, ?string $schema, ?string $tableName, ?string $pluginType = null): array {
 		$this->logMessage(LogType::Query, 'Starting getColumns');
 
 		if(! isset($pluginType)) {
@@ -812,7 +812,7 @@ class DrillConnection {
 			$filePath = $schema . '.';
 		}
 
-		$filePath .= $tableName;
+		$filePath .= $tableName ?? '';
 
 		// Since MongoDB uses the ** notation, bypass that and query the data directly
 		// TODO: Add API functionality here as well
@@ -1026,7 +1026,7 @@ class DrillConnection {
 
 					if($finalCount == 2 && $finalCount == count($pathItems) + 1) {
 						// There is no db for this senario
-						unset($dbName);
+						$dbName = null;
 					}
 					else {
 						for ($i = 1; $i < count($pathItems) - 1; $i++) {
@@ -1039,7 +1039,7 @@ class DrillConnection {
 						$dbName .= '.'.$pathItems[$i];
 					}
 
-					unset($tableName);
+					$tableName = null;
 				}
 				$this->logMessage(LogType::Info, 'DB Name: ' . $dbName);
 
