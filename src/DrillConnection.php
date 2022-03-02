@@ -949,7 +949,7 @@ class DrillConnection {
 					// build the full path
 					[$filePath, $remaining, $lastItem] = $this->buildFilePath($pathItems, $pathLimit);
 
-					$this->logMessage(LogType::Info, "Calling Get Files, pathLimit: {$pathLimit}, filePath: {$filePath}");
+					$this->logMessage(LogType::Info, "Calling Get Files, pathLimit: {$pathLimit}, filePath: {$filePath}, remaining: {$remaining}");
 					$results = $this->getFiles($pluginName, $filePath);
 
 					$this->logMessage(LogType::Info, 'getFiles Results: ' . print_r($results, true));
