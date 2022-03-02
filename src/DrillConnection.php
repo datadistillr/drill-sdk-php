@@ -939,11 +939,11 @@ class DrillConnection {
 			case PluginType::File:
 
 				$pathLimit = $itemCount;
+				$prevResults = null;
+				$prevItem = null;
 
 				do {
 					$nestedData = false;
-					$prevItem = null;
-					$prevResults = null;
 
 					// build the full path
 					[$filePath, $remaining, $lastItem] = $this->buildFilePath($pathItems, $pathLimit);
