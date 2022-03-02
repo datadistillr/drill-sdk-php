@@ -1145,6 +1145,9 @@ class DrillConnection {
 			case RequestFunction::CancelProfile:
 			case RequestFunction::EnablePlugin:
 			case RequestFunction::DisablePlugin:
+			case RequestFunction::UpdateAccessToken:
+			case RequestFunction::UpdateRefreshToken:
+			case RequestFunction::UpdateOAuthTokens:
 				$response = new ConfirmationResponse($result);
 				break;
 			case RequestFunction::Storage:
