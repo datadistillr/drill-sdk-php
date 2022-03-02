@@ -897,7 +897,10 @@ class DrillConnection {
 			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRawResponse();
 
 			foreach($responseData as $key=>$value) {
-				$columns[$key] = $value;
+				$columns[] = [
+					'column' => $key,
+					'data_type' => $value
+				];
 			}
 
 		} catch(\Exception $e) {
