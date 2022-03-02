@@ -16,4 +16,5 @@ enum LogType: string {
 	case Request = 'Request';
 	case Query = 'Query';
 	case Debug = 'Debug';
+	case StackTrace = 'Stack Trace';
 }

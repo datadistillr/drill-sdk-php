@@ -182,11 +182,13 @@ class DrillConnection {
 		}
 
 		if (isset($response->errorMessage)) {
-			$this->errorMessage = $response->errorMessage;
-			$this->stackTrace = $response->stackTrace ?? '';
+			$this->logMessage(LogType::Error, $response->errorMessage);
+			$this->logMessage(LogType::StackTrace, $response->stackTrace ?? '');
 			throw new Exception("Error in query: {$query}");
 		} else {
-			return new Result($response, $query, $url);
+			$result = new Result($response, $query, $url);
+			$this->logMessage(LogType::Query, 'Query Result: '. print_r($result, true));
+			return $result;
 		}
 
 	}
@@ -893,6 +895,8 @@ class DrillConnection {
 					$dirPath = '';
 					$count = 0;
 					$lastItem = '';
+					$prevItem = null;
+					$prevResults = null;
 
 					// Build initial path
 					foreach ($pathItems as $path) {
@@ -916,16 +920,28 @@ class DrillConnection {
 						$filePath .= ".`{$dirPath}`";
 					}
 
-					try {
-						$results = $this->getFiles($pluginName, $filePath);
-					} catch (Exception $e) {
+					$this->logMessage(LogType::Info, 'Calling Get Files');
+					$results = $this->getFiles($pluginName, $filePath);
 
-						$this->logMessage(LogType::Warning, 'Get Files Error: '. $e->getMessage());
+					$this->logMessage(LogType::Info, 'getFiles Results: ' . print_r($results, true));
 
+					// if no results, question...
+					if (count($results) == 0) {
+
+						$this->logMessage(LogType::Warning, 'No results, check one level up.');
+
+						$prevItem = $lastItem;
+						$prevResults = $results;
 						// TODO: check if error is a result of attempting to grab a file that should have been nested data.
 						$nestedData = true;
 						$pathLimit--;
+					} elseif (isset($prevResults) && (count($results) > 1 || (count($results) == 1 && $results[0]->name == $prevItem))) {
+						// original values were valid.
+						$this->logMessage(LogType::Info, 'Reverting back to previous value.');
+						$lastItem = $prevItem;
+						$results = $prevResults;
 					}
+
 
 				} while ($nestedData && $pathLimit > self::DIRECTORY_DEPTH);
 
@@ -993,7 +1009,7 @@ class DrillConnection {
 				}
 				break;
 			default:
-
+				$this->logMessage(LogType::Warning, 'Unsupported Plugin Type');
 		}
 
 		$this->logMessage(LogType::Info, 'Ending getNestedTree() request.');
