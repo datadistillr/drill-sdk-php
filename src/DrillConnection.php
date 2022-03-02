@@ -892,7 +892,7 @@ class DrillConnection {
 		try {
 			$sql = "SELECT getMapSchema(d.`{$mapPath}`) FROM {$filePath} AS d LIMIT 1";
 
-			$responseData = $this->query($sql, RequestFunction::MapQuery);
+			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRawResponse();
 
 			foreach($responseData as $key=>$value) {
 				$columns[$key] = $value;

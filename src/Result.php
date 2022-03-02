@@ -53,6 +53,12 @@ class Result {
 	 */
 	protected RequestUrl $requestUrl;
 
+	/**
+	 * Original Response
+	 * @var Response $response
+	 */
+	protected Response $response;
+
 	// endregion
 	// region Static Functions
 
@@ -93,6 +99,7 @@ class Result {
 		$this->metadata = $response->metadata ?? [];
 		$this->query = $query;
 		$this->requestUrl = $url;
+		$this->response = $response;
 
 		for ($i = 0; $i < count($this->columns); $i++) {
 			$info = [
@@ -130,8 +137,16 @@ class Result {
 	 *
 	 * @return array
 	 */
-	function getColumns(): array {
+	public function getColumns(): array {
 		return $this->columns;
+	}
+
+	/**
+	 * Get Raw Response
+	 * @return Response
+	 */
+	public function getRawResponse(): Response {
+		return $this->response;
 	}
 
 	/**
@@ -139,7 +154,7 @@ class Result {
 	 *
 	 * @return ?object First ResultSet item
 	 */
-	function first(): ?object {
+	public function first(): ?object {
 		if(isset($this->rows[0])) {
 			return $this->rows[0];
 		}
@@ -151,7 +166,7 @@ class Result {
 	 *
 	 * @return int Number of fields
 	 */
-	function fieldCount(): int {
+	public function fieldCount(): int {
 		return count($this->columns);
 	}
 
@@ -160,7 +175,7 @@ class Result {
 	 *
 	 * @return int Number of Rows
 	 */
-	function numRows(): int {
+	public function numRows(): int {
 		return count($this->rows);
 	}
 
