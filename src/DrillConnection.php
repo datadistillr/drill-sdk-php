@@ -879,18 +879,19 @@ class DrillConnection {
 	/**
 	 * Get Complex maps
 	 *
+	 * @param string $pluginName Plugin Name
 	 * @param string $filePath File Path
 	 * @param string $mapPath Map Path
 	 * @return array
 	 */
-	public function getComplexMaps(string $filePath, string $mapPath): array {
+	public function getComplexMaps(string $pluginName, string $filePath, string $mapPath): array {
 
 		$this->logMessage(LogType::Query, 'Starting getComplexMaps');
 
 		$columns = [];
 
 		try {
-			$sql = "SELECT getMapSchema(d.`{$mapPath}`) FROM {$filePath} AS d LIMIT 1";
+			$sql = "SELECT getMapSchema(d.`{$mapPath}`) FROM `{$pluginName}`.{$filePath} AS d LIMIT 1";
 			$this->logMessage(LogType::Info, 'ComplexMaps SQL: ' . $sql);
 
 			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRawResponse();
@@ -973,7 +974,7 @@ class DrillConnection {
 						// TODO: fix possible bug on items where nested folders of the same name may give false positive
 					} elseif (isset($prevResults) && count($results) == 1 && $results[0]->name == $lastItem) {
 						// Found file... now checking for nested data
-						$results = $this->getComplexMaps($filePath, $remaining);
+						$results = $this->getComplexMaps($pluginName, $filePath, $remaining);
 
 					} elseif ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
 						// check if submitted path is actually a file.  If so get columns
