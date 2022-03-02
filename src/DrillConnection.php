@@ -978,11 +978,6 @@ class DrillConnection {
 					} elseif ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
 						// check if submitted path is actually a file.  If so get columns
 						$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
-					} else {
-						// results are not valid set results as empty array, should never get here.  Just failing gracefully.
-						$this->logMessage(LogType::Error, 'Invalid Result set');
-						$results = [];
-
 					}
 
 
