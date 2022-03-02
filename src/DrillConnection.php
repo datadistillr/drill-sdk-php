@@ -186,7 +186,7 @@ class DrillConnection {
 
 		if (isset($response->errorMessage)) {
 			$this->logMessage(LogType::Error, $response->errorMessage);
-			$this->logMessage(LogType::StackTrace, $response->stackTrace ?? '');
+			$this->logMessage(LogType::StackTrace, isset($response->stackTrace) ? print_r($response->stackTrace, true) : '');
 			throw new Exception("Error in query: {$query}");
 		} else {
 			$result = new Result($response, $query, $url);
