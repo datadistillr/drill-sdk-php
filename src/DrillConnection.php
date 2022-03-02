@@ -344,20 +344,6 @@ class DrillConnection {
             $this->logMessage(LogType::Debug, 'Ending saveStoragePlugin');
             return true;
         }
-
-        // old code
-		// $response = $this->drillRequest($url, $postData);
-        //
-		// if (isset($response->errorMessage)
-		// 	|| isset($response->result) && strtolower($response->result) !== 'success'
-		// 	|| !isset($response->result)) {
-		// 	$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-		// 	$this->stackTrace = $response->stackTrace ?? [];
-		// 	throw new Exception("Unable to save storage plugin: " . print_r($config, true));
-		// } else {
-		// 	return true;
-		// }
-
 	}
 
 	/**
@@ -385,19 +371,6 @@ class DrillConnection {
             $this->logMessage(LogType::Debug, 'Ending deleteStoragePlugin');
             return true;
         }
-
-        // old code
-        // $response = $this->drillRequest($url);
-        //
-		// if (isset($response->errorMessage)
-		// 	|| isset($response->result) && strtolower($response->result) !== 'success'
-		// 	|| !isset($response->result)) {
-		// 	$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-		// 	$this->stackTrace = $response->stackTrace ?? [];
-		// 	throw new Exception("Unable to delete storage plugin.");
-		// } else {
-		// 	return true;
-		// }
 	}
 
     /**
@@ -427,19 +400,6 @@ class DrillConnection {
             $this->logMessage(LogType::Debug, 'Ending updateRefreshToken');
             return true;
         }
-
-        // old code
-        // $response = $this->drillRequest($url, $postData);
-        //
-        // if (isset($response->errorMessage)
-        //     || isset($response->result) && strtolower($response->result) !== 'success'
-        //     || !isset($response->result)) {
-        //     $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-        //     $this->stackTrace = $response->stackTrace ?? [];
-        //     throw new Exception("Unable to save refresh token.");
-        // } else {
-        //     return true;
-        // }
     }
 
     /**
@@ -469,19 +429,6 @@ class DrillConnection {
             $this->logMessage(LogType::Debug, 'Ending updateAccessToken');
             return true;
         }
-
-        // old code
-        // $response = $this->drillRequest($url, $postData);
-        //
-        // if (isset($response->errorMessage)
-        //     || isset($response->result) && strtolower($response->result) !== 'success'
-        //     || !isset($response->result)) {
-        //     $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-        //     $this->stackTrace = $response->stackTrace ?? [];
-        //     throw new Exception("Unable to save access token.");
-        // } else {
-        //     return true;
-        // }
     }
 
     /**
@@ -513,19 +460,6 @@ class DrillConnection {
             $this->logMessage(LogType::Debug, 'Ending updateOAuthTokens');
             return true;
         }
-
-        // old code
-        // $response = $this->drillRequest($url, $postData);
-        //
-        // if (isset($response->errorMessage)
-        //     || isset($response->result) && strtolower($response->result) !== 'success'
-        //     || !isset($response->result)) {
-        //     $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-        //     $this->stackTrace = $response->stackTrace ?? [];
-        //     throw new Exception("Unable to save OAuth tokens.");
-        // } else {
-        //     return true;
-        // }
     }
 
     /**
