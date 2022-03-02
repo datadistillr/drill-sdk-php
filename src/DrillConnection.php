@@ -1190,6 +1190,7 @@ class DrillConnection {
 		switch ($url->getFunction()) {
 			case RequestFunction::MapQuery:
 				$response = new RawResponse($result);
+				break;
 			case RequestFunction::Query:
 				$response = new QueryResponse($result);
 				break;
