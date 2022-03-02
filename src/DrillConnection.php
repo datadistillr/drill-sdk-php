@@ -985,7 +985,7 @@ class DrillConnection {
 					}
 
 
-				} while ($nestedData && $pathLimit > self::DIRECTORY_DEPTH);
+				} while ($nestedData && $pathLimit >= self::DIRECTORY_DEPTH);
 
 
 				break;
