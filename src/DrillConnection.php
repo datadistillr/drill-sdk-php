@@ -891,12 +891,12 @@ class DrillConnection {
 		$columns = [];
 
 		try {
-			$sql = "SELECT getMapSchema(d.`{$mapPath}`) FROM `{$pluginName}`.{$filePath} AS d LIMIT 1";
+			$sql = "SELECT getMapSchema(d.`{$mapPath}`) AS `listing` FROM `{$pluginName}`.{$filePath} AS d LIMIT 1";
 			$this->logMessage(LogType::Info, 'ComplexMaps SQL: ' . $sql);
 
-			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRawResponse();
+			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRows();
 
-			foreach($responseData as $key=>$value) {
+			foreach($responseData[0]->listing as $key=>$value) {
 				$columns[] = [
 					'column' => $key,
 					'data_type' => $value
