@@ -325,21 +325,39 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function saveStoragePlugin(string $pluginName, array $config): ?bool {
-		$url = new RequestUrl(RequestFunction::CreatePlugin, $this->hostname, $this->port, $this->ssl, $pluginName);
+        $this->logMessage(LogType::Debug, 'Starting saveStoragePlugin');
+
+        $url = new RequestUrl(RequestFunction::CreatePlugin, $this->hostname, $this->port, $this->ssl, $pluginName);
 
 		$postData = new PluginData($pluginName, $config);
 
-		$response = $this->drillRequest($url, $postData);
+        try {
+            $response = $this->drillRequest($url, $postData);
+        } catch (\Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+        if (isset($response->errorMessage)) {
+            $this->logMessage(LogType::Error, $response->errorMessage);
+            $this->logMessage(LogType::StackTrace, $response->stackTrace ?? '');
+            throw new Exception("Error saving storage plugin $pluginName: " . print_r($config, true));
+        } else {
+            $this->logMessage(LogType::Debug, 'Ending saveStoragePlugin');
+            return true;
+        }
 
-		if (isset($response->errorMessage)
-			|| isset($response->result) && strtolower($response->result) !== 'success'
-			|| !isset($response->result)) {
-			$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-			$this->stackTrace = $response->stackTrace ?? [];
-			throw new Exception("Unable to save storage plugin: " . print_r($config, true));
-		} else {
-			return true;
-		}
+        // old code
+		// $response = $this->drillRequest($url, $postData);
+        //
+		// if (isset($response->errorMessage)
+		// 	|| isset($response->result) && strtolower($response->result) !== 'success'
+		// 	|| !isset($response->result)) {
+		// 	$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+		// 	$this->stackTrace = $response->stackTrace ?? [];
+		// 	throw new Exception("Unable to save storage plugin: " . print_r($config, true));
+		// } else {
+		// 	return true;
+		// }
+
 	}
 
 	/**
@@ -350,19 +368,36 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	public function deleteStoragePlugin(string $pluginName): ?bool {
-		$url = new RequestUrl(RequestFunction::DeletePlugin, $this->hostname, $this->port, $this->ssl, $pluginName);
+        $this->logMessage(LogType::Debug, 'Starting deleteStoragePlugin');
 
-		$response = $this->drillRequest($url);
+        $url = new RequestUrl(RequestFunction::DeletePlugin, $this->hostname, $this->port, $this->ssl, $pluginName);
 
-		if (isset($response->errorMessage)
-			|| isset($response->result) && strtolower($response->result) !== 'success'
-			|| !isset($response->result)) {
-			$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-			$this->stackTrace = $response->stackTrace ?? [];
-			throw new Exception("Unable to delete storage plugin.");
-		} else {
-			return true;
-		}
+        try {
+            $response = $this->drillRequest($url);
+        } catch (\Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+        if (isset($response->errorMessage)) {
+            $this->logMessage(LogType::Error, $response->errorMessage);
+            $this->logMessage(LogType::StackTrace, $response->stackTrace ?? '');
+            throw new Exception("Error deleting storage plugin $pluginName.");
+        } else {
+            $this->logMessage(LogType::Debug, 'Ending deleteStoragePlugin');
+            return true;
+        }
+
+        // old code
+        // $response = $this->drillRequest($url);
+        //
+		// if (isset($response->errorMessage)
+		// 	|| isset($response->result) && strtolower($response->result) !== 'success'
+		// 	|| !isset($response->result)) {
+		// 	$this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+		// 	$this->stackTrace = $response->stackTrace ?? [];
+		// 	throw new Exception("Unable to delete storage plugin.");
+		// } else {
+		// 	return true;
+		// }
 	}
 
     /**
@@ -374,21 +409,37 @@ class DrillConnection {
      * @throws Exception
      */
     public function updateRefreshToken(string $pluginName, string $refreshToken): ?bool {
+        $this->logMessage(LogType::Debug, 'Starting updateRefreshToken');
         $url = new RequestUrl(RequestFunction::UpdateRefreshToken, $this->hostname, $this->port, $this->ssl, $pluginName);
 
         $postData = new RefreshTokenData($pluginName, $refreshToken);
 
-        $response = $this->drillRequest($url, $postData);
-
-        if (isset($response->errorMessage)
-            || isset($response->result) && strtolower($response->result) !== 'success'
-            || !isset($response->result)) {
-            $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-            $this->stackTrace = $response->stackTrace ?? [];
-            throw new Exception("Unable to save refresh token.");
+        try {
+            $response = $this->drillRequest($url, $postData);
+        } catch (\Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+        if (isset($response->errorMessage)) {
+            $this->logMessage(LogType::Error, $response->errorMessage);
+            $this->logMessage(LogType::StackTrace, $response->stackTrace ?? '');
+            throw new Exception("Error saving refresh token.");
         } else {
+            $this->logMessage(LogType::Debug, 'Ending updateRefreshToken');
             return true;
         }
+
+        // old code
+        // $response = $this->drillRequest($url, $postData);
+        //
+        // if (isset($response->errorMessage)
+        //     || isset($response->result) && strtolower($response->result) !== 'success'
+        //     || !isset($response->result)) {
+        //     $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+        //     $this->stackTrace = $response->stackTrace ?? [];
+        //     throw new Exception("Unable to save refresh token.");
+        // } else {
+        //     return true;
+        // }
     }
 
     /**
@@ -400,21 +451,37 @@ class DrillConnection {
      * @throws Exception
      */
     public function updateAccessToken(string $pluginName, string $accessToken): ?bool {
+        $this->logMessage(LogType::Debug, 'Starting updateAccessToken');
         $url = new RequestUrl(RequestFunction::UpdateAccessToken, $this->hostname, $this->port, $this->ssl, $pluginName);
 
         $postData = new AccessTokenData($pluginName, $accessToken);
 
-        $response = $this->drillRequest($url, $postData);
-
-        if (isset($response->errorMessage)
-            || isset($response->result) && strtolower($response->result) !== 'success'
-            || !isset($response->result)) {
-            $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-            $this->stackTrace = $response->stackTrace ?? [];
-            throw new Exception("Unable to save access token.");
+        try {
+            $response = $this->drillRequest($url, $postData);
+        } catch (\Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+        if (isset($response->errorMessage)) {
+            $this->logMessage(LogType::Error, $response->errorMessage);
+            $this->logMessage(LogType::StackTrace, $response->stackTrace ?? '');
+            throw new Exception("Error saving access token.");
         } else {
+            $this->logMessage(LogType::Debug, 'Ending updateAccessToken');
             return true;
         }
+
+        // old code
+        // $response = $this->drillRequest($url, $postData);
+        //
+        // if (isset($response->errorMessage)
+        //     || isset($response->result) && strtolower($response->result) !== 'success'
+        //     || !isset($response->result)) {
+        //     $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+        //     $this->stackTrace = $response->stackTrace ?? [];
+        //     throw new Exception("Unable to save access token.");
+        // } else {
+        //     return true;
+        // }
     }
 
     /**
@@ -427,21 +494,38 @@ class DrillConnection {
      * @throws Exception
      */
     public function updateOAuthTokens(string $pluginName, string $accessToken, string $refreshToken): ?bool {
+        $this->logMessage(LogType::Debug, 'Starting updateOAuthTokens');
+
         $url = new RequestUrl(RequestFunction::UpdateOAuthTokens, $this->hostname, $this->port, $this->ssl, $pluginName);
 
         $postData = new OAuthTokenData($pluginName, $accessToken, $refreshToken);
 
-        $response = $this->drillRequest($url, $postData);
-
-        if (isset($response->errorMessage)
-            || isset($response->result) && strtolower($response->result) !== 'success'
-            || !isset($response->result)) {
-            $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
-            $this->stackTrace = $response->stackTrace ?? [];
-            throw new Exception("Unable to save OAuth tokens.");
+        try {
+            $response = $this->drillRequest($url, $postData);
+        } catch (\Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+        if (isset($response->errorMessage)) {
+            $this->logMessage(LogType::Error, $response->errorMessage);
+            $this->logMessage(LogType::StackTrace, $response->stackTrace ?? '');
+            throw new Exception("Error saving OAuth tokens.");
         } else {
+            $this->logMessage(LogType::Debug, 'Ending updateOAuthTokens');
             return true;
         }
+
+        // old code
+        // $response = $this->drillRequest($url, $postData);
+        //
+        // if (isset($response->errorMessage)
+        //     || isset($response->result) && strtolower($response->result) !== 'success'
+        //     || !isset($response->result)) {
+        //     $this->errorMessage = $response->errorMessage ?? $response->result ?? implode('. ', (array)$response);
+        //     $this->stackTrace = $response->stackTrace ?? [];
+        //     throw new Exception("Unable to save OAuth tokens.");
+        // } else {
+        //     return true;
+        // }
     }
 
     /**
