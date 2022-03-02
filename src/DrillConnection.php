@@ -1297,7 +1297,7 @@ class DrillConnection {
 		foreach ($pathItems as $path) {
 			// check if we have hit the limit
 			if(isset($limit) && ++$count > $limit) {
-				$remaining .= isEmpty($remaining) ? $remaining : '/'.$remaining;
+				$remaining .= (isEmpty($remaining) ? $path : '/'.$path);
 				continue;
 			}
 
