@@ -16,6 +16,7 @@ use datadistillr\Drill\Response\OptionsListResponse;
 use datadistillr\Drill\Response\ProfileResponse;
 use datadistillr\Drill\Response\ProfilesResponse;
 use datadistillr\Drill\Response\QueryResponse;
+use datadistillr\Drill\Response\RawResponse;
 use datadistillr\Drill\Response\Response;
 use datadistillr\Drill\Request\PluginData;
 use datadistillr\Drill\Request\QueryData;
@@ -31,6 +32,7 @@ use datadistillr\Drill\ResultSet\Schema;
 use datadistillr\Drill\ResultSet\Table;
 use Error;
 use Exception;
+use function PHPUnit\Framework\isEmpty;
 
 /**
  * @package datadistillr\drill-sdk-php
@@ -165,13 +167,14 @@ class DrillConnection {
 	 * Executes a Drill query.
 	 *
 	 * @param string $query The query to run/execute
+	 * @param RequestFunction $function Fuction to run [Default: RequestFunction::Query]
 	 *
 	 * @return ?Result Returns Result object if the query executed successfully, null otherwise.
 	 * @throws Exception
 	 */
-	public function query(string $query): ?Result {
+	public function query(string $query, RequestFunction $function = RequestFunction::Query): ?Result {
 
-		$url = new RequestUrl(RequestFunction::Query, $this->hostname, $this->port, $this->ssl);
+		$url = new RequestUrl($function, $this->hostname, $this->port, $this->ssl);
 
 		$postData = new QueryData($query, $this->rowLimit);
 
@@ -183,7 +186,7 @@ class DrillConnection {
 
 		if (isset($response->errorMessage)) {
 			$this->logMessage(LogType::Error, $response->errorMessage);
-			$this->logMessage(LogType::StackTrace, $response->stackTrace ?? '');
+			$this->logMessage(LogType::StackTrace, isset($response->stackTrace) ? print_r($response->stackTrace, true) : '');
 			throw new Exception("Error in query: {$query}");
 		} else {
 			$result = new Result($response, $query, $url);
@@ -192,6 +195,7 @@ class DrillConnection {
 		}
 
 	}
+
 
 	// region Plugin Methods
 
@@ -733,18 +737,23 @@ class DrillConnection {
 	 * Retrieve the View Names
 	 *
 	 * @param string $plugin Plugin/Datasource to retrieve view names from
-	 * @param string $schema Schema to retrieve view names from
+	 * @param ?string $schema Schema to retrieve view names from
 	 *
 	 * @return ?array List of names or null if error
 	 * @throws Exception
 	 */
-	public function getViewNames(string $plugin, string $schema): ?array {
+	public function getViewNames(string $plugin, ?string $schema): ?array {
 		if (!$this->isActive()) {
 			return null;
 		}
 
+		$pluginSchema = $plugin;
+		if(isset($schema)) {
+			$pluginSchema .= '.'.$schema;
+		}
+
 		$viewNames = [];
-		$sql = "SELECT `TABLE_NAME` FROM INFORMATION_SCHEMA.views WHERE `table_schema`='{$plugin}.{$schema}'";
+		$sql = "SELECT `TABLE_NAME` FROM INFORMATION_SCHEMA.views WHERE `table_schema`='{$pluginSchema}'";
 		$results = $this->query($sql)->getRows();
 
 		foreach ($results as $result) {
@@ -784,21 +793,26 @@ class DrillConnection {
 	 * If the data is a database, we can use the DESCRIBE TABLE command to access schema information.
 	 *
 	 * @param string $plugin The plugin name
-	 * @param string $schema The schema name
-	 * @param string $tableName The table or file name
+	 * @param ?string $schema The schema name
+	 * @param ?string $tableName The table or file name
 	 * @param ?string $pluginType Plugin Type [default: null]
 	 *
 	 * @return Column[] List of columns present
 	 * @throws Exception
 	 */
-	public function getColumns(string $plugin, string $schema, string $tableName, ?string $pluginType = null): array {
+	public function getColumns(string $plugin, ?string $schema, ?string $tableName, ?string $pluginType = null): array {
 		$this->logMessage(LogType::Query, 'Starting getColumns');
 
 		if(! isset($pluginType)) {
 			$pluginType = $this->getPluginType($plugin);
 		}
 
-		$filePath = "{$schema}.{$tableName}";
+		$filePath = '';
+		if(isset($schema)) {
+			$filePath = $schema . '.';
+		}
+
+		$filePath .= $tableName ?? '';
 
 		// Since MongoDB uses the ** notation, bypass that and query the data directly
 		// TODO: Add API functionality here as well
@@ -806,8 +820,13 @@ class DrillConnection {
 
 			$views = $this->getViewNames($plugin, $schema);
 
+			$pluginSchema = $plugin;
+			if(isset($schema)) {
+				$pluginSchema .= '.'.$schema;
+			}
+
 			if (in_array($tableName, $views)) {
-				$quotedFileName = "`{$plugin}.{$schema}`.`{$tableName}`"; // NOTE: escape char ` may need to go around plugin and schema separately
+				$quotedFileName = "`{$pluginSchema}`.`{$tableName}`"; // NOTE: escape char ` may need to go around plugin and schema separately
 			} else {
 				$quotedFileName = $this->formatDrillTable($plugin, $filePath);
 			}
@@ -872,6 +891,40 @@ class DrillConnection {
 		return $columns;
 	}
 
+	/**
+	 * Get Complex maps
+	 *
+	 * @param string $pluginName Plugin Name
+	 * @param string $filePath File Path
+	 * @param string $mapPath Map Path
+	 * @return array
+	 */
+	public function getComplexMaps(string $pluginName, string $filePath, string $mapPath): array {
+
+		$this->logMessage(LogType::Query, 'Starting getComplexMaps');
+
+		$columns = [];
+
+		try {
+			$sql = "SELECT getMapSchema(`d`.{$mapPath}) AS `listing` FROM `{$pluginName}`.{$filePath} AS `d` LIMIT 1";
+			$this->logMessage(LogType::Info, 'ComplexMaps SQL: ' . $sql);
+
+			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRows();
+
+			foreach($responseData[0]->listing as $key=>$value) {
+				$columns[] = [
+					'column' => $key,
+					'data_type' => $value
+				];
+			}
+
+		} catch(\Exception $e) {
+			$this->logMessage(LogType::Error, $e->getMessage());
+		}
+
+		$this->logMessage(LogType::Query, 'Ending getComplexMaps');
+		return $columns;
+	}
 	// endregion
 	// region Path Method(s)
 
@@ -906,39 +959,16 @@ class DrillConnection {
 			case PluginType::File:
 
 				$pathLimit = $itemCount;
+				$prevResults = null;
+				$prevItem = null;
 
 				do {
 					$nestedData = false;
-					$filePath = '';
-					$dirPath = '';
-					$count = 0;
-					$lastItem = '';
-					$prevItem = null;
-					$prevResults = null;
 
-					// Build initial path
-					foreach ($pathItems as $path) {
-						// check if we have hit the limit
-						if(++$count > $pathLimit) {
-							break;
-						}
+					// build the full path
+					[$filePath, $remaining, $lastItem] = $this->buildFilePath($pathItems, $pathLimit);
 
-						$lastItem = $path;
-						if ($count == self::WORKSPACE_DEPTH) {
-							$filePath .= "`{$path}`";
-						} elseif ($count == self::DIRECTORY_DEPTH && $itemCount == self::DIRECTORY_DEPTH) {
-							$filePath .= ".`{$path}`";
-						} else {
-							$dirPath .= $count == self::DIRECTORY_DEPTH ? $path : '/' . $path;
-						}
-					}
-
-					// Build directory path
-					if ($count > self::DIRECTORY_DEPTH) {
-						$filePath .= ".`{$dirPath}`";
-					}
-
-					$this->logMessage(LogType::Info, 'Calling Get Files');
+					$this->logMessage(LogType::Info, "Calling Get Files, pathLimit: {$pathLimit}, filePath: {$filePath}, remaining: {$remaining}");
 					$results = $this->getFiles($pluginName, $filePath);
 
 					$this->logMessage(LogType::Info, 'getFiles Results: ' . print_r($results, true));
@@ -950,7 +980,7 @@ class DrillConnection {
 
 						$prevItem = $lastItem;
 						$prevResults = $results;
-						// TODO: check if error is a result of attempting to grab a file that should have been nested data.
+						// check if error is a result of attempting to grab a file that should have been nested data.
 						$nestedData = true;
 						$pathLimit--;
 					} elseif (isset($prevResults) && (count($results) > 1 || (count($results) == 1 && $results[0]->name == $prevItem))) {
@@ -958,15 +988,21 @@ class DrillConnection {
 						$this->logMessage(LogType::Info, 'Reverting back to previous value.');
 						$lastItem = $prevItem;
 						$results = $prevResults;
+
+						// TODO: fix possible bug on items where nested folders of the same name may give false positive
+					} elseif (isset($prevResults) && count($results) == 1 && $results[0]->name == $lastItem) {
+						// Found file... now checking for nested data
+						$results = $this->getComplexMaps($pluginName, $filePath, $remaining);
+
+					} elseif ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
+						// check if submitted path is actually a file.  If so get columns
+						$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
 					}
 
 
-				} while ($nestedData && $pathLimit > self::DIRECTORY_DEPTH);
+				} while ($nestedData && $pathLimit >= self::DIRECTORY_DEPTH);
 
-				// check if submitted path is actually a file.  If so get columns
-				if($count >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
-					$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
-				}
+
 				break;
 			case PluginType::JDBC:
 			case PluginType::Mongo:
@@ -984,11 +1020,18 @@ class DrillConnection {
 
 				$this->logMessage(LogType::Info, 'Final Count: ' . $finalCount);
 
+				// TODO: clean this up to work better with the offset value
 				if($finalCount > 1) {
 					$tableName = $pathItems[count($pathItems)-1];
 
-					for($i = 1; $i < count($pathItems)-1; $i++) {
-						$dbName .= '.'.$pathItems[$i];
+					if($finalCount == 2 && $finalCount == count($pathItems) + 1) {
+						// There is no db for this senario
+						$dbName = null;
+					}
+					else {
+						for ($i = 1; $i < count($pathItems) - 1; $i++) {
+							$dbName .= '.' . $pathItems[$i];
+						}
 					}
 				}
 				elseif($finalCount == 1) {
@@ -996,7 +1039,7 @@ class DrillConnection {
 						$dbName .= '.'.$pathItems[$i];
 					}
 
-					unset($tableName);
+					$tableName = null;
 				}
 				$this->logMessage(LogType::Info, 'DB Name: ' . $dbName);
 
@@ -1023,7 +1066,7 @@ class DrillConnection {
 					$results = $this->getTables($pluginName, $pathItems[0], $pluginType);
 				}
 				elseif($itemCount == 1) {
-					$results = $this->getColumns($pluginName, $pathItems[0], $pathItems[1], $pluginType);
+					$results = $this->getColumns($pluginName, null, $pathItems[0], $pluginType);
 				}
 				break;
 			default:
@@ -1166,6 +1209,9 @@ class DrillConnection {
 		unset($response);
 
 		switch ($url->getFunction()) {
+			case RequestFunction::MapQuery:
+				$response = new RawResponse($result);
+				break;
 			case RequestFunction::Query:
 				$response = new QueryResponse($result);
 				break;
@@ -1253,9 +1299,51 @@ class DrillConnection {
 	protected function jdbcTableOffset(string $specificType): int {
 		$level = match ($specificType) {
 			'bigquery' => 1,
+			'sqlserver' => -1,
 			default => 0,
 		};
 		return $level;
+	}
+
+	/**
+	 * Build File path
+	 *
+	 * @param String[] $pathItems Path Items
+	 * @param ?int $limit Path Item limit
+	 * @return array File Path String [$filePath, $remaining]
+	 */
+	protected function buildFilePath(array $pathItems, ?int $limit = null): array {
+		// Build initial path
+		$count = 0;
+		$itemCount = count($pathItems);
+		$filePath = '';
+		$dirPath = '';
+		$remaining = '';
+		$lastItem = null;
+
+		foreach ($pathItems as $path) {
+			// check if we have hit the limit
+			if(isset($limit) && ++$count > $limit) {
+				$remaining .= ($remaining == '' ? "`{$path}`" : ".`{$path}`");
+				continue;
+			}
+
+			$lastItem = $path;
+			if ($count == self::WORKSPACE_DEPTH) {
+				$filePath .= "`{$path}`";
+			} elseif ($count == self::DIRECTORY_DEPTH && $itemCount == self::DIRECTORY_DEPTH) {
+				$filePath .= ".`{$path}`";
+			} else {
+				$dirPath .= $count == self::DIRECTORY_DEPTH ? $path : '/' . $path;
+			}
+		}
+
+		// Build directory path
+		if ($count > self::DIRECTORY_DEPTH) {
+			$filePath .= ".`{$dirPath}`";
+		}
+
+		return [$filePath, $remaining, $lastItem];
 	}
 
 
