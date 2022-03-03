@@ -385,7 +385,7 @@ class DrillConnection {
         $this->logMessage(LogType::Debug, 'Starting updateRefreshToken');
         $url = new RequestUrl(RequestFunction::UpdateRefreshToken, $this->hostname, $this->port, $this->ssl, $pluginName);
 
-        $postData = new RefreshTokenData($pluginName, $refreshToken);
+        $postData = new RefreshTokenData($refreshToken);
 
         try {
             $response = $this->drillRequest($url, $postData);
@@ -414,7 +414,7 @@ class DrillConnection {
         $this->logMessage(LogType::Debug, 'Starting updateAccessToken');
         $url = new RequestUrl(RequestFunction::UpdateAccessToken, $this->hostname, $this->port, $this->ssl, $pluginName);
 
-        $postData = new AccessTokenData($pluginName, $accessToken);
+        $postData = new AccessTokenData($accessToken);
 
         try {
             $response = $this->drillRequest($url, $postData);
@@ -445,7 +445,7 @@ class DrillConnection {
 
         $url = new RequestUrl(RequestFunction::UpdateOAuthTokens, $this->hostname, $this->port, $this->ssl, $pluginName);
 
-        $postData = new OAuthTokenData($pluginName, $accessToken, $refreshToken);
+        $postData = new OAuthTokenData($accessToken, $refreshToken);
 
         try {
             $response = $this->drillRequest($url, $postData);

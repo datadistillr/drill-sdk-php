@@ -11,12 +11,6 @@ namespace datadistillr\Drill\Request;
 class OAuthTokenData extends RequestData {
 
 	/**
-	 * Plugin Name
-	 * @var string $name
-	 */
-	public string $name;
-
-	/**
 	 * Access Token
 	 * @var string $accessToken
 	 */
@@ -31,14 +25,12 @@ class OAuthTokenData extends RequestData {
     /**
      * OAuthTokenData Constructor
      *
-     * @param string $pluginName Plugin Name
      * @param string $accessToken Access Token
      * @param string $refreshToken Refresh Token
      */
-	public function __construct(string $pluginName, string $accessToken, string $refreshToken) {
+	public function __construct(string $accessToken, string $refreshToken) {
 		parent::__construct();
 
-		$this->name = $pluginName;
 		$this->accessToken = $accessToken;
 		$this->refreshToken = $refreshToken;
 	}

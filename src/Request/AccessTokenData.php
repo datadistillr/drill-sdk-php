@@ -11,12 +11,6 @@ namespace datadistillr\Drill\Request;
 class AccessTokenData extends RequestData {
 
 	/**
-	 * Plugin Name
-	 * @var string $name
-	 */
-	public string $name;
-
-	/**
 	 * Access Token
 	 * @var string $accessToken
 	 */
@@ -25,13 +19,11 @@ class AccessTokenData extends RequestData {
 	/**
 	 * AccessTokenData Constructor
 	 *
-	 * @param string $pluginName Plugin Name
 	 * @param string $accessToken Access Token
 	 */
-	public function __construct(string $pluginName, string $accessToken) {
+	public function __construct(string $accessToken) {
 		parent::__construct();
 
-		$this->name = $pluginName;
 		$this->accessToken = $accessToken;
 	}
 }
