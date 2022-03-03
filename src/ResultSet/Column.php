@@ -12,33 +12,33 @@ class Column extends ResultSet {
 
 	/**
 	 * Plugin Name
-	 * @var string $plugin
+	 * @var ?string $plugin
 	 */
-	public string $plugin;
+	public ?string $plugin;
 
 	/**
 	 * Schema Name
-	 * @var string $schema
+	 * @var ?string $schema
 	 */
-	public string $schema;
+	public ?string $schema;
 
 	/**
 	 * Table Name
-	 * @var string $table_name
+	 * @var ?string $table_name
 	 */
-	public string $table_name;
+	public ?string $table_name;
 
 	/**
 	 * Column Name
-	 * @var string $name
+	 * @var ?string $name
 	 */
-	public string $name;
+	public ?string $name;
 
 	/**
 	 * Data type
-	 * @var string $data_type
+	 * @var ?string $data_type
 	 */
-	public string $data_type;
+	public ?string $data_type;
 
 	/**
 	 * Nullable

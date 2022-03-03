@@ -5,32 +5,35 @@ namespace datadistillr\Drill;
 use Exception;
 use PHPUnit\Framework\TestCase;
 
-use datadistillr\Drill\DrillConnection;
-use datadistillr\Drill\Result;
 use ReflectionClass;
 
 
 class DrillTest extends TestCase {
 	
-	protected $host = 'localhost';
-	protected $port = 8047;
+//	protected $host = 'localhost';
+//	protected $port = 8047;
+//	protected $username = '';
+//	protected $password = '';
+//	protected $ssl = false;
+//	protected $row_limit = 10000;
+
+	protected $host = 'drill.dev.datadistillr.io';
+	protected $port = 443;
 	protected $username = '';
 	protected $password = '';
-	protected $ssl = false;
+	protected $ssl = true;
 	protected $row_limit = 10000;
-	
-	protected $drill = null;
 
 	public function testConnection() {
-		$this->drill = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$active = $this->drill->isActive();
+		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		$active = $dh->isActive();
 		$this->assertEquals(true, $active);
 	}
 
 	public function testBadConnection() {
 		try {
-			$this->baddrill = new DrillConnection($this->host, 8048);
-			$active = $this->baddrill->isActive();
+			$dh = new DrillConnection($this->host, 8048);
+			$active = $dh->isActive();
 		} catch(Exception $e) {
 			$active = false;
 		} finally {
@@ -41,102 +44,130 @@ class DrillTest extends TestCase {
 
 	public function testQuery() {
 
-		$this->drill = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$result = $this->drill->query('SELECT * FROM `cp`.`employee.json` LIMIT 7');
+		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		$result = $dh->query('SELECT * FROM `cp`.`employee.json` LIMIT 7');
 
 
-		$this->assertEmpty($this->drill->errorMessage());
+		$this->assertEmpty($dh->errorMessage());
 
 		$fieldCount = $result->fieldCount();
 		$this->assertEquals(16, $fieldCount);
 	}
 
 	public function testPathsOnJDBC() {
-		$this->drill = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+
+		// TODO: test this on Postgres
+		// TODO: test this with MsSql
 
 		// Schema
-		$result = $this->drill->getNestedTree('mariadb');
-		$this->assertCount(7, $result);
-		print_r($result);
+		$result = $dh->getNestedTree('mariadb');
+		$this->assertCount(15, $result);
 
-		// Tables
-		$result = $this->drill->getNestedTree('mariadb', 'yelp');
+		$result = $dh->getNestedTree('postgres');
 		$this->assertCount(4, $result);
 		print_r($result);
 
+		// Tables
+		$result = $dh->getNestedTree('mariadb', 'yelp');
+		$this->assertCount(4, $result);
+
+		$result = $dh->getNestedTree('postgres', 'pg_catalog');
+		$this->assertCount(251, $result);
+		print_r($result);
+
 		// Columns
-		$result = $this->drill->getNestedTree('mariadb', 'yelp', 'Users');
+		$result = $dh->getNestedTree('mariadb', 'yelp', 'Users');
 		$this->assertCount(7, $result);
 		print_r($result);
 	}
 
 	public function testPlugins() {
-		$d = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$plugins = $d->getAllStoragePlugins();
-		$this->assertEquals(15, count($plugins));
+		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		$plugins = $dh->getAllStoragePlugins();
+		$this->assertEquals(17, count($plugins));
 
-		$enabledPlugins = $d->getEnabledStoragePlugins();
-		$this->assertEquals(6, count($enabledPlugins));
+		$enabledPlugins = $dh->getEnabledStoragePlugins();
+		$this->assertEquals(4, count($enabledPlugins));
 	}
 
 	public function testErrorMessage() {
-    $this->drill = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-    $result = $this->drill->query("SELECT CAST('abc' AS INT) FROM (VALUES(1))");
-    $this->assertNotEmpty($this->drill->errorMessage());
+    $dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+    try {
+		$result = $dh->query("SELECT CAST('abc' AS INT) FROM (VALUES(1))");
+	} catch (Exception $e) {
+		// Do something with $e
+	}
+    $this->assertNotEmpty($dh->errorMessage());
     $this->assertStringStartsWith("Unexpected exception during fragment initialization",
-      $this->drill->errorMessage());
+      $dh->errorMessage());
   }
 
 	public function testFormatTable() {
-		$d = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$reflector = new ReflectionClass( 'DrillConnection' );
+		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		$reflector = new ReflectionClass( 'datadistillr\Drill\DrillConnection' );
 		$fdtMethod = $reflector->getMethod('formatDrillTable');
 		$fdtMethod->setAccessible(true);
 
-		$file_with_workspace = $fdtMethod->invokeArgs($this->drill, ["dfs.test.data.csv", true]);
-		$this->assertEquals("dfs.`test`.`data.csv`", $file_with_workspace);
+		// TODO: test this on Postgres
 
-		$file_without_workspace = $fdtMethod->invokeArgs($this->drill, ["dfs.test.csv", true]);
-		$this->assertEquals("dfs.`test.csv`", $file_without_workspace);
+		$file_with_workspace = $fdtMethod->invokeArgs($dh, ['dfs', 'tmp.data.csv', true]);
+		$this->assertEquals('`dfs`.`tmp`.`data.csv`', $file_with_workspace);
 
-		$file_with_workspace_and_backticks = $fdtMethod->invokeArgs($this->drill, ["`dfs`.`test`.`data.csv`", true]);
-		$this->assertEquals("dfs.`test`.`data.csv`", $file_with_workspace_and_backticks);
+		$file_with_workspace2 = $fdtMethod->invokeArgs($dh, ['dfs', 'tmp.my.directory/data.csv', true]);
+		$this->assertEquals('`dfs`.`tmp`.`my.directory/data.csv`', $file_with_workspace2);
 
-		$db_2_part = $fdtMethod->invokeArgs($this->drill, ["mysql.sales", false]);
-		$this->assertEquals("`mysql`.`sales`", $db_2_part);
+		$file_without_workspace = $fdtMethod->invokeArgs($dh, ['dfs', 'data.csv', true]);
+		$this->assertEquals('`dfs`.`data.csv`', $file_without_workspace);
 
-		$db_3_part = $fdtMethod->invokeArgs($this->drill, ["mysql.sales.customers", false]);
-		$this->assertEquals("`mysql`.`sales`.`customers`", $db_3_part);
+		$file_without_workspace2 = $fdtMethod->invokeArgs($dh, ['dfs', 'my.directory/data.csv', true]);
+		$this->assertEquals('`dfs`.`my.directory/data.csv`', $file_without_workspace2);
+
+		$file_with_workspace_and_backticks = $fdtMethod->invokeArgs($dh, ['dfs', '`tmp`.`data.csv`', true]);
+		$this->assertEquals('`dfs`.`tmp`.`data.csv`', $file_with_workspace_and_backticks);
+
+		$db_2_part = $fdtMethod->invokeArgs($dh, ['mysql', 'sales', false]);
+		$this->assertEquals('`mysql`.`sales`', $db_2_part);
+
+		$db_3_part = $fdtMethod->invokeArgs($dh, ['mysql','sales.customers', false]);
+		$this->assertEquals('`mysql`.`sales`.`customers`', $db_3_part);
 	}
 
 	public function testSchemaNames() {
-		$d = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		print_r($d->get_schema_names());
-		$this->assertTrue(true);
+		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		$this->assertContains('dfs.root', $dh->getSchemaNames());
 	}
 
 	public function testGetPluginType() {
-		$d = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$plugin_type = $d->get_plugin_type("dfs");
-		$this->assertEquals("file", $plugin_type);
+		$startTime = new \DateTime();
+		echo 'Start getPluginType(): ' . $startTime->format('Y-m-d H:i:s v') . "\n";
+		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		$plugin_type = $dh->getPluginType('mariadb');
+		$this->assertEquals('jdbc', $plugin_type);
+		$plugin_type = $dh->getPluginType('mdubs_postgres');
+		$this->assertEquals('jdbc', $plugin_type);
+		$endTime = new \DateTime();
+		echo 'End getPluginType(): ' . $endTime->format('Y-m-d H:i:s v') . "\n";
+		echo 'Total time: ' . $startTime->diff($endTime)->format('%Y-%m-%d %H:%i:%s %F') . "\n";
 	}
 
 	public function testGetTableNames() {
-		$d = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		print_r($d->get_table_names('dfs', 'test'));
+		// TODO: validate this
+		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		print_r($dh->getTableNames('dfs', 'test'));
 		$this->assertTrue(true);
 	}
 
 	public function testGetColumns() {
-		$d = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$x = $d->get_columns("Dummy Customers-1.xlsx", "dfs.test");
+		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		$x = $dh->getColumns('dfs', 'test', 'Dummy Customers-1.xlsx');
 		print_r($x);
 		$this->assertTrue(true);
 	}
 
 	public function testCleanDataTypeName() {
-		$this->assertEquals("DECIMAL", Result::clean_data_type_name("DECIMAL(3, 4)"));
-		$this->assertEquals("FLOAT8", Result::clean_data_type_name("FLOAT8"));
-		$this->assertEquals("CHAR", Result::clean_data_type_name("CHAR(30)"));
+		$this->assertEquals("DECIMAL", Result::cleanDataTypeName("DECIMAL(3, 4)"));
+		$this->assertEquals("FLOAT8", Result::cleanDataTypeName("FLOAT8"));
+		$this->assertEquals("CHAR", Result::cleanDataTypeName("CHAR(30)"));
 	}
 }
