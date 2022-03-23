@@ -1299,6 +1299,7 @@ class DrillConnection {
 	protected function jdbcTableOffset(string $specificType): int {
 		$level = match ($specificType) {
 			'bigquery' => 1,
+			'snowflake' => 1,
 			'sqlserver' => -1,
 			default => 0,
 		};
