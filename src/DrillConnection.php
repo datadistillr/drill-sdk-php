@@ -591,6 +591,7 @@ class DrillConnection {
 		$rawResults = $this->query($query)->getRows();
 		if (!$rawResults) {
 			$this->errorMessage = 'Error retrieving schema names';
+			$this->logMessage(LogType::Error, 'Error retrieving schema names');
 			return null;
 		}
 
@@ -840,7 +841,7 @@ class DrillConnection {
 			/*
 			 * Case for everything else.
 			 */
-			$quotedSchema = $this->formatDrillTable($plugin, $filePath, false);
+			$quotedSchema = $this->formatDrillTable($plugin, $filePath);
 			$sql = "DESCRIBE {$quotedSchema}";
 		}
 
@@ -1045,10 +1046,9 @@ class DrillConnection {
 
 				if($finalCount < 1) {
 					$list = $this->getSchemaNames($pluginName, true);
+					$this->logMessage(LogType::Info, 'Returned a result set of size: ' . count($list));
+
 					$results = [];
-
-					$this->logMessage(LogType::Info, 'Returned a result set of size: ' . count($results));
-
 					foreach($list as $name) {
 						$results[] = new Schema(['plugin'=>$pluginName, 'name'=>$name]);
 					}
