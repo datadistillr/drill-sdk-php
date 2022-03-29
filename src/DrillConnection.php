@@ -948,6 +948,7 @@ class DrillConnection {
 		}
 		$pluginType = $plugin->config->type;
 		$specificType = $this->specificType($plugin);
+        $this->logMessage(LogType::Info, "specific type: {$specificType}");
 
 		$itemCount = count($pathItems);
 		if($itemCount == 1 && $pathItems[0] == '') {
@@ -1299,6 +1300,7 @@ class DrillConnection {
 	protected function jdbcTableOffset(string $specificType): int {
 		$level = match ($specificType) {
 			'bigquery' => 1,
+            'postgresql' => -1,
 			'snowflake' => 1,
 			'sqlserver' => -1,
 			default => 0,
