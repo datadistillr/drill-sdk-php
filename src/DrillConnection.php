@@ -847,17 +847,17 @@ class DrillConnection {
 
 		$this->logMessage(LogType::Query, $sql);
 
-		$result = $this->query($sql)->getRows();
+		$rows = $this->query($sql)->getRows();
 
 		$columns = [];
-		foreach ($result as $row) {
+		foreach ($rows as $row) {
 			$data = [
 				'plugin' => $plugin,
 				'schema' => $schema,
 				'table' => $tableName,
 				'name' => $row->COLUMN_NAME,
-				'dataType' => $row->DATA_TYPE,
-				'isNullable' => $row->IS_NULLABLE
+				'data_type' => $row->DATA_TYPE,
+				'is_nullable' => $row->IS_NULLABLE
 			];
 
 			$columns[] = new Column($data);
@@ -943,7 +943,7 @@ class DrillConnection {
 		$this->logMessage(LogType::Info, 'Starting getNestedTree() request.');
 
 		$plugin = $this->getStoragePlugin($pluginName);
-		if(! isset($plugin)) {
+		if(! isset($plugin) || ! isset($plugin->config)) {
 			return [];
 		}
 		$pluginType = $plugin->config->type;
