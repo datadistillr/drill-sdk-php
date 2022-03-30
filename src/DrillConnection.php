@@ -591,6 +591,7 @@ class DrillConnection {
 		$rawResults = $this->query($query)->getRows();
 		if (!$rawResults) {
 			$this->errorMessage = 'Error retrieving schema names';
+			$this->logMessage(LogType::Error, 'Error retrieving schema names');
 			return null;
 		}
 
@@ -840,7 +841,7 @@ class DrillConnection {
 			/*
 			 * Case for everything else.
 			 */
-			$quotedSchema = $this->formatDrillTable($plugin, $filePath, false);
+			$quotedSchema = $this->formatDrillTable($plugin, $filePath);
 			$sql = "DESCRIBE {$quotedSchema}";
 		}
 
@@ -947,6 +948,7 @@ class DrillConnection {
 		}
 		$pluginType = $plugin->config->type;
 		$specificType = $this->specificType($plugin);
+        $this->logMessage(LogType::Info, "specific type: {$specificType}");
 
 		$itemCount = count($pathItems);
 		if($itemCount == 1 && $pathItems[0] == '') {
@@ -1045,10 +1047,9 @@ class DrillConnection {
 
 				if($finalCount < 1) {
 					$list = $this->getSchemaNames($pluginName, true);
+					$this->logMessage(LogType::Info, 'Returned a result set of size: ' . count($list));
+
 					$results = [];
-
-					$this->logMessage(LogType::Info, 'Returned a result set of size: ' . count($results));
-
 					foreach($list as $name) {
 						$results[] = new Schema(['plugin'=>$pluginName, 'name'=>$name]);
 					}
@@ -1299,6 +1300,8 @@ class DrillConnection {
 	protected function jdbcTableOffset(string $specificType): int {
 		$level = match ($specificType) {
 			'bigquery' => 1,
+            'postgresql' => -1,
+			'snowflake' => 1,
 			'sqlserver' => -1,
 			default => 0,
 		};
