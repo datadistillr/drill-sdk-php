@@ -862,7 +862,6 @@ class DrillConnection {
 
 			$columns[] = new Column($data);
 		}
-		$this->logMessage(LogType::Info, 'Columns: ' . print_r($columns, true));
 
 		$this->logMessage(LogType::Query, 'Ending getColumns');
 		return $columns;
