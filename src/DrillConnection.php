@@ -862,6 +862,7 @@ class DrillConnection {
 
 			$columns[] = new Column($data);
 		}
+		$this->logMessage(LogType::Info, 'Columns: ' . print_r($columns, true));
 
 		$this->logMessage(LogType::Query, 'Ending getColumns');
 		return $columns;
@@ -943,7 +944,7 @@ class DrillConnection {
 		$this->logMessage(LogType::Info, 'Starting getNestedTree() request.');
 
 		$plugin = $this->getStoragePlugin($pluginName);
-		if(! isset($plugin)) {
+		if(! isset($plugin) || ! isset($plugin->config)) {
 			return [];
 		}
 		$pluginType = $plugin->config->type;
