@@ -1207,6 +1207,7 @@ class DrillConnection {
 
 		$result = json_decode($response);
 		if (! isset($result)) {
+			$this->logMessage(LogType::Debug, 'Drill response is null');
 			return null;
 		}
 
