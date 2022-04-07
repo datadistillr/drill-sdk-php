@@ -27,9 +27,9 @@ class StoragePluginResponse extends Response {
 	/**
 	 * Constructor class
 	 *
-	 * @param object $responseObject Base Object
+	 * @param ?object $responseObject Base Object
 	 */
-	public function __construct(object $responseObject) {
+	public function __construct(?object $responseObject) {
 		parent::__construct($responseObject);
 	}
 

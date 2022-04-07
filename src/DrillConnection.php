@@ -296,6 +296,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	function getStoragePlugin(string $plugin): ?StoragePluginResponse {
+		$this->logMessage(LogType::Request, 'Starting retrieval of StoragePlugin: ' . $plugin);
 
 		$url = new RequestUrl(RequestFunction::PluginInfo, $this->hostname, $this->port, $this->ssl, $plugin);
 
@@ -1163,6 +1164,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	private function drillRequest(RequestUrl $url, ?RequestData $postData = null): ?Response {
+		$this->logMessage(LogType::Request, 'Prepping Request to drill: '. $url);
 
 		$curlOptions = [
 			CURLOPT_CUSTOMREQUEST => $url->getRequestType()->value,
@@ -1195,6 +1197,7 @@ class DrillConnection {
 		// check for errors. If any, close connection and throw Error
 		if ($error = curl_error($ch)) {
 			curl_close($ch);
+			$this->logMessage(LogType::Error, 'Curl Error: ' . $error);
 			throw new Error($error);
 		}
 
