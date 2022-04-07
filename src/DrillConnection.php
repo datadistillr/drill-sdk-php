@@ -1195,6 +1195,7 @@ class DrillConnection {
 
 		$response = curl_exec($ch);
 
+		$this->logMessage(LogType::Info, 'cURL Options: ' . print_r($curlOptions, true));
 		$this->logMessage(LogType::Info, 'cURL info: ' . print_r(curl_getinfo($ch), true));
 
 		// check for errors. If any, close connection and throw Error
