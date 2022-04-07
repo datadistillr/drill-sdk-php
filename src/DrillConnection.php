@@ -945,6 +945,7 @@ class DrillConnection {
 
 		$plugin = $this->getStoragePlugin($pluginName);
 		if(! isset($plugin) || ! isset($plugin->config)) {
+			$this->logMessage(LogType::Error, 'Unable to access requested plugin: ' . $pluginName);
 			return [];
 		}
 		$pluginType = $plugin->config->type;
