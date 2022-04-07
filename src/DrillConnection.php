@@ -1164,7 +1164,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	private function drillRequest(RequestUrl $url, ?RequestData $postData = null): ?Response {
-		$this->logMessage(LogType::Request, 'Prepping Request to drill: '. $url);
+		$this->logMessage(LogType::Request, 'Prepping Request to drill: '. print_r($url, true));
 
 		$curlOptions = [
 			CURLOPT_CUSTOMREQUEST => $url->getRequestType()->value,
