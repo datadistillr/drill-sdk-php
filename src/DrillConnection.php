@@ -1167,6 +1167,7 @@ class DrillConnection {
 		$this->logMessage(LogType::Request, 'Prepping Request to drill: '. print_r($url, true));
 
 		$curlOptions = [
+			CURLOPT_USERPWD => $this->username.':'.$this->password,
 			CURLOPT_CUSTOMREQUEST => $url->getRequestType()->value,
 			CURLOPT_RETURNTRANSFER => true
 		];
