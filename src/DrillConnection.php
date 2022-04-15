@@ -296,6 +296,7 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	function getStoragePlugin(string $plugin): ?StoragePluginResponse {
+		$this->logMessage(LogType::Request, 'Starting retrieval of StoragePlugin: ' . $plugin);
 
 		$url = new RequestUrl(RequestFunction::PluginInfo, $this->hostname, $this->port, $this->ssl, $plugin);
 
@@ -944,6 +945,7 @@ class DrillConnection {
 
 		$plugin = $this->getStoragePlugin($pluginName);
 		if(! isset($plugin) || ! isset($plugin->config)) {
+			$this->logMessage(LogType::Error, 'Unable to access requested plugin: ' . $pluginName);
 			return [];
 		}
 		$pluginType = $plugin->config->type;
@@ -1163,8 +1165,10 @@ class DrillConnection {
 	 * @throws Exception
 	 */
 	private function drillRequest(RequestUrl $url, ?RequestData $postData = null): ?Response {
+		$this->logMessage(LogType::Request, 'Prepping Request to drill: '. print_r($url, true));
 
 		$curlOptions = [
+			CURLOPT_USERPWD => $this->username.':'.$this->password,
 			CURLOPT_CUSTOMREQUEST => $url->getRequestType()->value,
 			CURLOPT_RETURNTRANSFER => true
 		];
@@ -1192,9 +1196,13 @@ class DrillConnection {
 
 		$response = curl_exec($ch);
 
+		$this->logMessage(LogType::Info, 'cURL Options: ' . print_r($curlOptions, true));
+		$this->logMessage(LogType::Info, 'cURL info: ' . print_r(curl_getinfo($ch), true));
+
 		// check for errors. If any, close connection and throw Error
 		if ($error = curl_error($ch)) {
 			curl_close($ch);
+			$this->logMessage(LogType::Error, 'Curl Error: ' . $error);
 			throw new Error($error);
 		}
 
@@ -1204,6 +1212,7 @@ class DrillConnection {
 
 		$result = json_decode($response);
 		if (! isset($result)) {
+			$this->logMessage(LogType::Debug, 'Drill response is null');
 			return null;
 		}
 
