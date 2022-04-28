@@ -857,7 +857,6 @@ class DrillConnection {
 				'schema' => $schema,
 				'table' => $tableName,
 				'name' => $row->COLUMN_NAME,
-				'column' => $row->COLUMN_NAME,
 				'data_type' => $row->DATA_TYPE,
 				'is_nullable' => $row->IS_NULLABLE
 			];
@@ -884,7 +883,22 @@ class DrillConnection {
 		try {
 			$sql = "SELECT * FROM {$fullformattedPath} LIMIT 1";
 
-			$columns = $this->query($sql)->getSchema();
+			$rows = $this->query($sql)->getSchema();
+
+			foreach ($rows as $row) {
+				$data = [
+					'plugin' => '',
+					'schema' => '',
+					'table' => '',
+					'name' => $row->column,
+					'data_type' => $row->data_type,
+					'is_nullable' => false
+				];
+
+				$columns[] = new Column($data);
+			}
+
+
 
 		} catch(\Exception $e) {
 			$this->logMessage(LogType::Error, $e->getMessage());
