@@ -857,7 +857,6 @@ class DrillConnection {
 				'schema' => $schema,
 				'table' => $tableName,
 				'name' => $row->COLUMN_NAME,
-//				'column' => $row->COLUMN_NAME,
 				'data_type' => $row->DATA_TYPE,
 				'is_nullable' => $row->IS_NULLABLE
 			];
