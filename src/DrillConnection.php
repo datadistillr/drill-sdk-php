@@ -890,8 +890,8 @@ class DrillConnection {
 					'plugin' => '',
 					'schema' => '',
 					'table' => '',
-					'name' => $row->column,
-					'data_type' => $row->data_type,
+					'name' => $row['column'],
+					'data_type' => $row['data_type'],
 					'is_nullable' => false
 				];
 
