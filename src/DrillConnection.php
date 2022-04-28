@@ -167,7 +167,7 @@ class DrillConnection {
 	 * Executes a Drill query.
 	 *
 	 * @param string $query The query to run/execute
-	 * @param RequestFunction $function Fuction to run [Default: RequestFunction::Query]
+	 * @param RequestFunction $function Function to run [Default: RequestFunction::Query]
 	 *
 	 * @return ?Result Returns Result object if the query executed successfully, null otherwise.
 	 * @throws Exception
@@ -857,6 +857,7 @@ class DrillConnection {
 				'schema' => $schema,
 				'table' => $tableName,
 				'name' => $row->COLUMN_NAME,
+//				'column' => $row->COLUMN_NAME,
 				'data_type' => $row->DATA_TYPE,
 				'is_nullable' => $row->IS_NULLABLE
 			];
@@ -883,7 +884,22 @@ class DrillConnection {
 		try {
 			$sql = "SELECT * FROM {$fullformattedPath} LIMIT 1";
 
-			$columns = $this->query($sql)->getSchema();
+			$rows = $this->query($sql)->getSchema();
+
+			foreach ($rows as $row) {
+				$data = [
+					'plugin' => '',
+					'schema' => '',
+					'table' => '',
+					'name' => $row->column,
+					'data_type' => $row->data_type,
+					'is_nullable' => false
+				];
+
+				$columns[] = new Column($data);
+			}
+
+
 
 		} catch(\Exception $e) {
 			$this->logMessage(LogType::Error, $e->getMessage());
@@ -948,7 +964,7 @@ class DrillConnection {
 			$this->logMessage(LogType::Error, 'Unable to access requested plugin: ' . $pluginName);
 			return [];
 		}
-		$pluginType = $plugin->config->type;
+		$pluginType = $plugin->config->type; // jdbc, http, file, splunk, etc
 		$specificType = $this->specificType($plugin);
         $this->logMessage(LogType::Info, "specific type: {$specificType}");
 
