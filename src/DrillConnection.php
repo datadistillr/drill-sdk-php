@@ -1023,7 +1023,7 @@ class DrillConnection {
 						$nestedData = true;
 						$pathLimit--;
 
-						if(preg_match('/\.xlsx?$/', $filePath)) {
+						if(preg_match('/\.xlsx?`$/', $filePath)) {
 							$excelFile = true;
 						}
 
