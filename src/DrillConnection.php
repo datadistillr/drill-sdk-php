@@ -1081,7 +1081,7 @@ class DrillConnection {
 					} elseif ($excelFile) {
 						// Identify if file is an excel file
 						if (isset($prevResults) && $results[0]->name == $lastItem) {
-							// check if submitted path is actually a file.  If so get columns
+							// check if submitted path is actually a file plus a sheet name.  If so get columns
 							$results = $this->getExcelColumns($pluginName, $filePath, $remaining);
 
 						} elseif ($results[0]->name == $lastItem) {
