@@ -978,13 +978,14 @@ class DrillConnection {
 	 * @return array
 	 * @throws Exception
 	 */
-	public function getExcelTables(string $pluginName, string $filePath, string $sheetName): array {
-		$this->logMessage(LogType::Request, 'Starting getExcelTables()');
+	public function getExcelColumns(string $pluginName, string $filePath, string $sheetName): array {
+		$this->logMessage(LogType::Request, 'Starting getExcelColumns()');
 
 		$columns = [];
+		$sheetName = $this->removeBackTicks($sheetName);
 
 		try {
-			$sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'excel', sheetName => {$sheetName})) LIMIT 1";
+			$sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'excel', sheetName => '{$sheetName}')) LIMIT 1";
 			$this->logMessage(LogType::Info, 'ComplexMaps SQL: ' . $sql);
 
 			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRows();
@@ -999,7 +1000,7 @@ class DrillConnection {
 			$this->logMessage(LogType::Error, $e->getMessage());
 		}
 
-		$this->logMessage(LogType::Request, 'Ending getExcelTables()');
+		$this->logMessage(LogType::Request, 'Ending getExcelColumns()');
 		return $columns;
 	}
 	// endregion
@@ -1082,7 +1083,7 @@ class DrillConnection {
 						// Identify if file is an excel file
 						if (isset($prevResults) && $results[0]->name == $lastItem) {
 							// check if submitted path is actually a file.  If so get columns
-							$results = $this->getExcelTables($pluginName, $filePath, $remaining);
+							$results = $this->getExcelColumns($pluginName, $filePath, $remaining);
 
 						} elseif ($results[0]->name == $lastItem) {
 							// Path is Excel file.  Return list of sheets.
@@ -1453,6 +1454,15 @@ class DrillConnection {
 		return [$filePath, $remaining, $lastItem];
 	}
 
+	/**
+	 * Remove back-ticks
+	 *
+	 * @param string $path Path with backticks
+	 * @return string $path with backticks removed
+	 */
+	private function removeBackTicks(string $path): string {
+		return preg_replace('/`/', '', $path);
+	}
 
 	// endregion
 }
