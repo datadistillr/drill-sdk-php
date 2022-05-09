@@ -999,6 +999,7 @@ class DrillConnection {
 				$pathLimit = $itemCount;
 				$prevResults = null;
 				$prevItem = null;
+				$excelFile = false;
 
 				do {
 					$nestedData = false;
@@ -1011,6 +1012,11 @@ class DrillConnection {
 					$results = $this->getFiles($pluginName, $filePath);
 
 					$this->logMessage(LogType::Info, 'getFiles Results: ' . print_r($results, true));
+
+					if($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && preg_match('/\.xlsx?`$/', $filePath)) {
+						$excelFile = true;
+						$this->logMessage(LogType::Debug, 'Excel File.');
+					}
 
 
 					// if no results, question...
@@ -1031,15 +1037,15 @@ class DrillConnection {
 						$results = $prevResults;
 
 						// TODO: fix possible bug on items where nested folders of the same name may give false positive
-					} elseif (isset($prevResults) && count($results) == 1 && preg_match('/\.xlsx?`$/', $filePath)) {
+					} elseif ($excelFile) {
 						// Identify if file is an excel file
-						if ($results[0]->name == $lastItem) {
-							// Path is Excel file.  Return list of sheets.
-							$results = $this->getExcelSheets($pluginName, $filePath);
-
-						} elseif ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
+						if (isset($prevResults) && count($results) &&$results[0]->name == $lastItem) {
 //							// check if submitted path is actually a file.  If so get columns
 //							$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
+
+						} elseif ($results[0]->name == $lastItem) {
+							// Path is Excel file.  Return list of sheets.
+							$results = $this->getExcelSheets($pluginName, $filePath);
 						}
 					}
 					elseif (isset($prevResults) && count($results) == 1 && $results[0]->name == $lastItem) {
