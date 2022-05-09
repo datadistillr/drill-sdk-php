@@ -782,6 +782,25 @@ class DrillConnection {
 		return $results;
 	}
 
+	/**
+	 * Retrieve list of Excel Sheets/Tabs
+	 *
+	 * @param string $pluginName Plugin Name
+	 * @param string $filePath File Path
+	 * @return Result[]
+	 * @throws Exception
+	 */
+	public function getExcelSheets(string $pluginName, string $filePath): array {
+		$this->logMessage(LogType::Request, 'Starting getExcelSheets()');
+
+		$results = $this->query("SELECT _sheets AS sheets FROM `{$pluginName}`.`{$filePath}` LIMIT 1")->getRows();
+
+		$this->logMessage(LogType::Debug, 'Sheet Results: ' . print_r($results, true));
+		$this->logMessage(LogType::Request, 'Ending getExcelSheets()');
+
+		return [];
+	}
+
 	// endregion
 	// region Column Methods
 
@@ -980,6 +999,7 @@ class DrillConnection {
 				$pathLimit = $itemCount;
 				$prevResults = null;
 				$prevItem = null;
+				$excelFile = false;
 
 				do {
 					$nestedData = false;
@@ -1002,6 +1022,11 @@ class DrillConnection {
 						// check if error is a result of attempting to grab a file that should have been nested data.
 						$nestedData = true;
 						$pathLimit--;
+
+						if(preg_match('/\.xlsx?$/', $filePath)) {
+							$excelFile = true;
+						}
+
 					} elseif (isset($prevResults) && (count($results) > 1 || (count($results) == 1 && $results[0]->name == $prevItem))) {
 						// original values were valid.
 						$this->logMessage(LogType::Info, 'Reverting back to previous value.');
@@ -1009,7 +1034,17 @@ class DrillConnection {
 						$results = $prevResults;
 
 						// TODO: fix possible bug on items where nested folders of the same name may give false positive
-					} elseif (isset($prevResults) && count($results) == 1 && $results[0]->name == $lastItem) {
+					} elseif ($excelFile) {
+						if (isset($prevResults) && count($results) == 1 && $results[0]->name == $lastItem) {
+							// Path is Excel file.  Return list of sheets.
+							$results = $this->getExcelSheets($pluginName, $filePath);
+
+						} elseif ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && $results[0]->name == $lastItem) {
+//							// check if submitted path is actually a file.  If so get columns
+//							$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
+						}
+					}
+					elseif (isset($prevResults) && count($results) == 1 && $results[0]->name == $lastItem) {
 						// Found file... now checking for nested data
 						$results = $this->getComplexMaps($pluginName, $filePath, $remaining);
 
