@@ -787,7 +787,7 @@ class DrillConnection {
 	 *
 	 * @param string $pluginName Plugin Name
 	 * @param string $filePath File Path
-	 * @return array
+	 * @return Table[]
 	 * @throws Exception
 	 */
 	public function getExcelSheets(string $pluginName, string $filePath): array {
@@ -798,11 +798,14 @@ class DrillConnection {
 		$this->logMessage(LogType::Debug, 'Sheet Results: ' . print_r($results, true));
 		$this->logMessage(LogType::Request, 'Ending getExcelSheets()');
 
+		$tables = [];
 		if(count($results) >= 1 && isset($results[0]->sheets)) {
-			return $results[0]->sheets;
+			foreach($results[0]->sheets as $sheetName) {
+				$tables[] = new Table(['schema'=> $filePath, 'name'=>$sheetName]);
+			}
 		}
 
-		return [];
+		return $tables;
 	}
 
 	// endregion
