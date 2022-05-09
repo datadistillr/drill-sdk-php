@@ -999,7 +999,6 @@ class DrillConnection {
 				$pathLimit = $itemCount;
 				$prevResults = null;
 				$prevItem = null;
-				$excelFile = false;
 
 				do {
 					$nestedData = false;
@@ -1008,9 +1007,11 @@ class DrillConnection {
 					[$filePath, $remaining, $lastItem] = $this->buildFilePath($pathItems, $pathLimit);
 
 					$this->logMessage(LogType::Info, "Calling Get Files, pathLimit: {$pathLimit}, filePath: {$filePath}, remaining: {$remaining}");
+
 					$results = $this->getFiles($pluginName, $filePath);
 
 					$this->logMessage(LogType::Info, 'getFiles Results: ' . print_r($results, true));
+
 
 					// if no results, question...
 					if (count($results) == 0) {
@@ -1023,10 +1024,6 @@ class DrillConnection {
 						$nestedData = true;
 						$pathLimit--;
 
-						if(preg_match('/\.xlsx?`$/', $filePath)) {
-							$excelFile = true;
-						}
-
 					} elseif (isset($prevResults) && (count($results) > 1 || (count($results) == 1 && $results[0]->name == $prevItem))) {
 						// original values were valid.
 						$this->logMessage(LogType::Info, 'Reverting back to previous value.');
@@ -1034,8 +1031,9 @@ class DrillConnection {
 						$results = $prevResults;
 
 						// TODO: fix possible bug on items where nested folders of the same name may give false positive
-					} elseif ($excelFile) {
-						if (isset($prevResults) && count($results) == 1 && $results[0]->name == $lastItem) {
+					} elseif (isset($prevResults) && count($results) == 1 && preg_match('/\.xlsx?`$/', $filePath)) {
+						// Identify if file is an excel file
+						if ($results[0]->name == $lastItem) {
 							// Path is Excel file.  Return list of sheets.
 							$results = $this->getExcelSheets($pluginName, $filePath);
 
