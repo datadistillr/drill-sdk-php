@@ -338,7 +338,7 @@ class DrillConnection {
 
         try {
             $response = $this->drillRequest($url, $postData);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
         if (isset($response->errorMessage)) {
@@ -365,7 +365,7 @@ class DrillConnection {
 
         try {
             $response = $this->drillRequest($url);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
         if (isset($response->errorMessage)) {
@@ -394,7 +394,7 @@ class DrillConnection {
 
         try {
             $response = $this->drillRequest($url, $postData);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
         if (isset($response->errorMessage)) {
@@ -423,7 +423,7 @@ class DrillConnection {
 
         try {
             $response = $this->drillRequest($url, $postData);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
         if (isset($response->errorMessage)) {
@@ -454,7 +454,7 @@ class DrillConnection {
 
         try {
             $response = $this->drillRequest($url, $postData);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
         if (isset($response->errorMessage)) {
@@ -923,7 +923,7 @@ class DrillConnection {
 
 
 
-		} catch(\Exception $e) {
+		} catch(Exception $e) {
 			$this->logMessage(LogType::Error, $e->getMessage());
 		}
 
@@ -958,11 +958,45 @@ class DrillConnection {
 				];
 			}
 
-		} catch(\Exception $e) {
+		} catch(Exception $e) {
 			$this->logMessage(LogType::Error, $e->getMessage());
 		}
 
 		$this->logMessage(LogType::Query, 'Ending getComplexMaps');
+		return $columns;
+	}
+
+	/**
+	 * Get Excel Columns
+	 *
+	 * @param string $pluginName Plugin Name
+	 * @param string $filePath File Path
+	 * @param string $sheetName Sheet Name
+	 * @return array
+	 * @throws Exception
+	 */
+	public function getExcelTables(string $pluginName, string $filePath, string $sheetName): array {
+		$this->logMessage(LogType::Request, 'Starting getExcelTables()');
+
+		$columns = [];
+
+		try {
+			$sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'excel', sheetName => '{$sheetName}')) LIMIT 1";
+			$this->logMessage(LogType::Info, 'ComplexMaps SQL: ' . $sql);
+
+			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRows();
+
+			foreach($responseData[0]->listing as $key=>$value) {
+				$columns[] = [
+					'column' => $key,
+					'data_type' => $value
+				];
+			}
+		} catch(Exception $e) {
+			$this->logMessage(LogType::Error, $e->getMessage());
+		}
+
+		$this->logMessage(LogType::Request, 'Ending getExcelTables()');
 		return $columns;
 	}
 	// endregion
@@ -1043,9 +1077,9 @@ class DrillConnection {
 						// TODO: fix possible bug on items where nested folders of the same name may give false positive
 					} elseif ($excelFile) {
 						// Identify if file is an excel file
-						if (isset($prevResults) && count($results) &&$results[0]->name == $lastItem) {
-//							// check if submitted path is actually a file.  If so get columns
-//							$results = $this->getFileColumns("`{$pluginName}`.{$filePath}");
+						if (isset($prevResults) && $results[0]->name == $lastItem) {
+							// check if submitted path is actually a file.  If so get columns
+							$results = $this->getExcelTables($pluginName, $filePath, $remaining);
 
 						} elseif ($results[0]->name == $lastItem) {
 							// Path is Excel file.  Return list of sheets.
