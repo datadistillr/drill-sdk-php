@@ -793,7 +793,7 @@ class DrillConnection {
 	public function getExcelSheets(string $pluginName, string $filePath): array {
 		$this->logMessage(LogType::Request, 'Starting getExcelSheets()');
 
-		$results = $this->query("SELECT _sheets AS sheets FROM `{$pluginName}`.`{$filePath}` LIMIT 1")->getRows();
+		$results = $this->query("SELECT _sheets AS sheets FROM `{$pluginName}`.{$filePath} LIMIT 1")->getRows();
 
 		$this->logMessage(LogType::Debug, 'Sheet Results: ' . print_r($results, true));
 		$this->logMessage(LogType::Request, 'Ending getExcelSheets()');
