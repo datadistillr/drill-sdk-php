@@ -984,7 +984,7 @@ class DrillConnection {
 		$columns = [];
 
 		try {
-			$sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'excel', sheetName => '{$sheetName}')) LIMIT 1";
+			$sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'excel', sheetName => {$sheetName})) LIMIT 1";
 			$this->logMessage(LogType::Info, 'ComplexMaps SQL: ' . $sql);
 
 			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRows();
