@@ -795,15 +795,14 @@ class DrillConnection {
 
 		$results = $this->query("SELECT _sheets AS sheets FROM `{$pluginName}`.{$filePath} LIMIT 1")->getRows();
 
-		$this->logMessage(LogType::Debug, 'Sheet Results: ' . print_r($results, true));
-		$this->logMessage(LogType::Request, 'Ending getExcelSheets()');
-
 		$tables = [];
 		if(count($results) >= 1 && isset($results[0]->sheets)) {
 			foreach($results[0]->sheets as $sheetName) {
 				$tables[] = new Table(['schema'=> $filePath, 'name'=>$sheetName]);
 			}
 		}
+
+		$this->logMessage(LogType::Request, 'Ending getExcelSheets()');
 
 		return $tables;
 	}
@@ -950,7 +949,6 @@ class DrillConnection {
 
 		try {
 			$sql = "SELECT getMapSchema(`d`.{$mapPath}) AS `listing` FROM `{$pluginName}`.{$filePath} AS `d` LIMIT 1";
-			$this->logMessage(LogType::Info, 'ComplexMaps SQL: ' . $sql);
 
 			$responseData = $this->query($sql, RequestFunction::MapQuery)->getRows();
 
@@ -987,8 +985,6 @@ class DrillConnection {
 		try {
 			$sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'excel', sheetName => '{$sheetName}')) LIMIT 1";
 			$responseData = $this->query($sql, RequestFunction::MapQuery)->getSchema();
-
-			$this->logMessage(LogType::Debug, 'Excel Columns: '. print_r($responseData, true));
 
 			foreach($responseData as $column) {
 				$columns[] = new Column([
