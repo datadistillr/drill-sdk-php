@@ -988,6 +988,8 @@ class DrillConnection {
 			$sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'excel', sheetName => '{$sheetName}')) LIMIT 1";
 			$responseData = $this->query($sql, RequestFunction::MapQuery)->getColumns();
 
+			$this->logMessage(LogType::Debug, 'Excel Columns: '. print_r($responseData, true));
+
 			foreach($responseData[0]->listing as $key=>$value) {
 				$columns[] = [
 					'column' => $key,
