@@ -1375,7 +1375,7 @@ class DrillConnection {
 		switch(PluginType::tryFrom($plugin->config->type)) {
 			case PluginType::JDBC:
 				$matches = [];
-				if(preg_match('/(?<=jdbc:)(\w+?)(?=:\/\/.*)/', $plugin->config->url, $matches)) {
+				if(preg_match('/(?<=jdbc:)(\w+?)(?=:.*)/', $plugin->config->url, $matches)) {
 					$type = $matches[1];
 				}
 				else {
