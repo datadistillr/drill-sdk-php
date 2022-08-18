@@ -378,6 +378,86 @@ class DrillConnection {
         }
 	}
 
+	/**
+	 * Add User Alias
+	 *
+	 * @param string $alias Alias Name
+	 * @param string $dataSourceName Data Source Name
+	 * @param string $userName User Name
+	 * return bool Returns true if successful, throws an error if failed.
+	 * @throws Exception
+	 */
+	public function addUserStorageAlias(string $alias, string $dataSourceName, string $userName): bool {
+		$this->logMessage(LogType::Debug, 'Starting addUserAlias');
+
+		$url = new RequestUrl(RequestFunction::Query, $this->hostname, $this->port, $this->ssl);
+
+		$query = "CREATE OR REPLACE ALIAS {$alias} FOR STORAGE `{$dataSourceName}` AS USER '{$userName}'";
+		$postData = new QueryData($query);
+
+		try {
+			$response = $this->drillRequest($url, $postData);
+		} catch (Error $e) {
+			throw new Exception($e->getMessage());
+		}
+
+		if (isset($response->errorMessage)) {
+			$this->logMessage(LogType::Error, $response->errorMessage);
+			$this->logMessage(LogType::StackTrace, isset($response->stackTrace) ? print_r($response->stackTrace, true) : '');
+			throw new Exception("Error in query: {$query}");
+		} else {
+			$result = new Result($response, $query, $url);
+			$this->logMessage(LogType::Debug, 'Ending addUserAlias');
+			return true;
+		}
+	}
+
+	/**
+	 * Delete User Alias
+	 *
+	 * @param string $alias Alias Name
+	 * @param string $dataSourceName Data Source Name
+	 * @param bool $all Drop All Aliases. If false, $userName is required [default: false]
+	 * @param ?string $userName User Name
+	 * return bool Returns true if successful, throws an error if failed.
+	 * @throws Exception
+	 */
+	public function deleteUserStorageAlias(string $alias, string $dataSourceName, bool $all = false, ?string $userName = null): bool {
+		$this->logMessage(LogType::Debug, 'Starting deleteUserAlias');
+
+		if(! $all && ! isset($userName)) {
+			throw new Exception('$userName required to drop Storage alias when not dropping all');
+		}
+
+		$url = new RequestUrl(RequestFunction::Query, $this->hostname, $this->port, $this->ssl);
+
+		if($all) {
+			$query = "DROP ALL ALIASES FOR STORAGE {$dataSourceName}";
+		} else {
+			$query = "DROP ALIAS {$alias} FOR STORAGE AS USER '{$userName}'";
+		}
+
+		$postData = new QueryData($query);
+
+		try {
+			$response = $this->drillRequest($url, $postData);
+		} catch (Error $e) {
+			throw new Exception($e->getMessage());
+		}
+
+		if (isset($response->errorMessage)) {
+			$this->logMessage(LogType::Error, $response->errorMessage);
+			$this->logMessage(LogType::StackTrace, isset($response->stackTrace) ? print_r($response->stackTrace, true) : '');
+			throw new Exception("Error in query: {$query}");
+		} else {
+			$result = new Result($response, $query, $url);
+			$this->logMessage(LogType::Debug, 'Ending deleteUserAlias');
+			return true;
+		}
+	}
+
+
+
     /**
      * Update Refresh Token. Updates an HTTP storage plugin's OAuth refresh token.
      *
