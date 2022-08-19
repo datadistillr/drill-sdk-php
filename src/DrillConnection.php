@@ -417,24 +417,19 @@ class DrillConnection {
 	 *
 	 * @param string $alias Alias Name
 	 * @param string $dataSourceName Data Source Name
-	 * @param bool $all Drop All Aliases. If false, $userName is required [default: false]
-	 * @param ?string $userName User Name
+	 * @param ?string $userName User Name. If null, all aliases will be dropped for that datasource [default: null]
 	 * return bool Returns true if successful, throws an error if failed.
 	 * @throws Exception
 	 */
-	public function deleteUserStorageAlias(string $alias, string $dataSourceName, bool $all = false, ?string $userName = null): bool {
+	public function deleteUserStorageAlias(string $alias, string $dataSourceName, ?string $userName = null): bool {
 		$this->logMessage(LogType::Debug, 'Starting deleteUserAlias');
-
-		if(! $all && ! isset($userName)) {
-			throw new Exception('$userName required to drop Storage alias when not dropping all');
-		}
 
 		$url = new RequestUrl(RequestFunction::Query, $this->hostname, $this->port, $this->ssl);
 
-		if($all) {
-			$query = "DROP ALL ALIASES FOR STORAGE {$dataSourceName}";
-		} else {
+		if(isset($userName)) {
 			$query = "DROP ALIAS {$alias} FOR STORAGE AS USER '{$userName}'";
+		} else {
+			$query = "DROP ALL ALIASES FOR STORAGE {$dataSourceName}";
 		}
 
 		$postData = new QueryData($query);
