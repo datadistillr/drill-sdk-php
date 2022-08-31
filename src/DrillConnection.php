@@ -660,7 +660,7 @@ class DrillConnection {
 		if(isset($pluginName)) {
 			// fix and escape underscore characters
 			$escapedPluginName = preg_replace('/_/', '\_', $pluginName);
-			$query .= " WHERE `SCHEMA_NAME` LIKE '{$escapedPluginName}%' escape '\'"; // This should have a period (.) after the plugin name {$pluginName}.%  but it has been removed to address a bug in Drill
+			$query .= " WHERE `SCHEMA_NAME` LIKE '{$escapedPluginName}.%' escape '\'"; // This should have a period (.) after the plugin name {$pluginName}.%  but it has been removed to address a bug in Drill
 			unset($escapedPluginName);
 		}
 
