@@ -11,6 +11,7 @@ namespace datadistillr\Drill;
  */
 enum PluginType: string {
 	case File = 'file';
+	case GoogleSheets = 'googlesheets';
 	case JDBC = 'jdbc';
 	case Mongo = 'mongo';
 	case Elastic = 'elastic';

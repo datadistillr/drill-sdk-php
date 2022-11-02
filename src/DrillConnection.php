@@ -1458,6 +1458,7 @@ class DrillConnection {
 				}
 				break;
 			case PluginType::File:
+			case PluginType::GoogleSheets:
 			case PluginType::Mongo:
 			case PluginType::Elastic:
 				$type = $plugin->config->type;
