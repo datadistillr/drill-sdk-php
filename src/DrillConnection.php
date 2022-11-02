@@ -1179,6 +1179,7 @@ class DrillConnection {
 
 				break;
 			case PluginType::JDBC:
+			case PluginType::GoogleSheets:
 			case PluginType::Mongo:
 				// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
 				$offset = $this->jdbcTableOffset($specificType);
