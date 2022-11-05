@@ -1178,8 +1178,61 @@ class DrillConnection {
 
 
 				break;
+            case PluginType::GoogleSheets:
+                // NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
+                $offset = $this->jdbcTableOffset($specificType);
+
+
+                $this->logMessage(LogType::Info, "path item count: {$itemCount}");
+                $this->logMessage(LogType::Info, "table offset: {$offset}");
+
+                $finalCount = $itemCount - $offset;
+
+                $dbName = $pathItems[0] ?? null;
+                $tableName = $pathItems[1] ?? null;
+
+                $this->logMessage(LogType::Info, 'Final Count: ' . $finalCount);
+
+                // TODO: clean this up to work better with the offset value
+                if($finalCount > 1) {
+                    $tableName = $pathItems[count($pathItems)-1];
+
+                    if($finalCount == 2 && $finalCount == count($pathItems) + 1) {
+                        // There is no db for this senario
+                        $dbName = null;
+                    }
+                    else {
+                        for ($i = 1; $i < count($pathItems) - 1; $i++) {
+                            $dbName .= '.' . $pathItems[$i];
+                        }
+                    }
+                }
+                elseif($finalCount == 1) {
+                    for($i = 1; $i < count($pathItems); $i++) {
+                        $dbName .= '.'.$pathItems[$i];
+                    }
+
+                    $tableName = null;
+                }
+                $this->logMessage(LogType::Info, 'DB Name: ' . $dbName);
+
+                if($finalCount < 1) {
+                    $list = $this->getSchemaNames($pluginName, true);
+                    $this->logMessage(LogType::Info, 'Returned a result set of size: ' . count($list));
+
+                    $results = [];
+                    foreach($list as $name) {
+                        $results[] = new Schema(['plugin'=>$pluginName, 'name'=>$name]);
+                    }
+                }
+                elseif($finalCount == 1) {
+                    $results = $this->getTables($pluginName, $dbName, $pluginType);
+                }
+                elseif($finalCount == 2) {
+                    $results = $this->getColumns($pluginName, $dbName, $tableName, $pluginType);
+                }
+                break;
 			case PluginType::JDBC:
-			case PluginType::GoogleSheets:
 			case PluginType::Mongo:
 				// NOTE: this may be a hack.  Need to know db plugin in order to decipher . level meanings
 				$offset = $this->jdbcTableOffset($specificType);
