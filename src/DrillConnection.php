@@ -1277,7 +1277,7 @@ class DrillConnection
 
                 break;
             case PluginType::GoogleSheets:
-                $pathLimit = $itemCount;
+                $pathLimit = $itemCount - 1;
                 // build the full path
                 [$filePath, $remaining, $lastItem] = $this->buildFilePath($pathItems, $pathLimit);
 
