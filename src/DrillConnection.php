@@ -1281,6 +1281,8 @@ class DrillConnection
                 // build the full path
                 [$filePath, $remaining, $lastItem] = $this->buildFilePath($pathItems, $pathLimit);
 
+                $this->logMessage(LogType::Info, "Calling Get Files, pathLimit: {$pathLimit}, filePath: {$filePath}, remaining: {$remaining}");
+
                 if ($itemCount < 1) {
                     $list = $this->getSchemaNames($pluginName, true);
                     $this->logMessage(LogType::Info, 'Returned a result set of size: ' . count($list));
