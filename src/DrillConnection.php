@@ -749,6 +749,30 @@ class DrillConnection
         return $schemata;
     }
 
+    /**
+     * Retrieve Google Sheet File/Spreadsheet Title
+     *
+     * @param string $pluginName Plugin Name
+     * @param string $spreadsheetId Spreadsheet ID
+     * @return string
+     * @throws Exception
+     */
+    public function getGSTitle(string $pluginName, string $spreadsheetId): string
+    {
+        $this->logMessage(LogType::Request, 'Starting getGSTitle()');
+
+        $result = $this->query("SELECT _title AS title FROM `{$pluginName}`.`{$spreadsheetId}`.`tab[0]` LIMIT 1")->getRows();
+
+        $title = '';
+        if (count($result) == 1 && isset($result->title)) {
+            $title = $result->title;
+        }
+
+        $this->logMessage(LogType::Request, 'Ending getGSTitle()');
+
+        return $title;
+    }
+
     // endregion
     // region Table Methods
 
@@ -1290,6 +1314,7 @@ class DrillConnection
                     $results = [];
                     foreach ($list as $name) {
                         $results[] = new Schema(['plugin' => $pluginName, 'name' => $name]);
+                        $results['title'] = $this->getGSTitle($pluginName, $name);
                     }
                 } elseif ($itemCount == 1) {
                     $results = $this->getSheets($pluginName, $filePath, $pluginType);
