@@ -763,9 +763,9 @@ class DrillConnection
         $title = '';
 
         try {
-            $result = $this->query("SELECT _title AS title FROM `{$pluginName}`.`{$spreadsheetId}`.`tab[0]` LIMIT 1")->getRows();
-            if (count($result) == 1 && isset($result->title)) {
-                $title = $result->title;
+            $rows = $this->query("SELECT _title AS title FROM `{$pluginName}`.`{$spreadsheetId}`.`tab[0]` LIMIT 1")->getRows();
+            if (count($rows) == 1 && isset($rows[0]->title)) {
+                $title = $rows[0]->title;
             }
         } catch (\Exception $e) {
             $this->logMessage(LogType::Error, $e->getMessage());
@@ -1317,7 +1317,7 @@ class DrillConnection
                     $results = [];
                     foreach ($list as $name) {
                         $results[] = new Schema(['plugin' => $pluginName, 'name' => $name]);
-                        $results['title'] = $this->getGSTitle($pluginName, $name);
+                        // TODO: implement getGSTitle($pluginName, $name)
                     }
                 } elseif ($itemCount == 1) {
                     $results = $this->getSheets($pluginName, $filePath, $pluginType);
