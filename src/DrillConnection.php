@@ -1317,7 +1317,9 @@ class DrillConnection
                     $results = [];
                     foreach ($list as $name) {
                         $title = $this->getGSTitle($pluginName, $name);
-                        $results[] = new Schema\GoogleSheets(['plugin' => $pluginName, 'name' => $name, 'title' => $title]);
+                        if (!empty($title)) { // no title indicates non-tabular data, so skip it
+                            $results[] = new Schema\GoogleSheets(['plugin' => $pluginName, 'name' => $name, 'title' => $title]);
+                        }
                     }
                 } elseif ($itemCount == 1) {
                     $results = $this->getSheets($pluginName, $filePath, $pluginType);
