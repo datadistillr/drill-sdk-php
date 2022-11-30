@@ -1316,8 +1316,8 @@ class DrillConnection
 
                     $results = [];
                     foreach ($list as $name) {
-                        $results[] = new Schema(['plugin' => $pluginName, 'name' => $name]);
-                        // TODO: implement getGSTitle($pluginName, $name)
+                        $title = $this->getGSTitle($pluginName, $name);
+                        $results[] = new Schema\GoogleSheets(['plugin' => $pluginName, 'name' => $name, 'title' => $title]);
                     }
                 } elseif ($itemCount == 1) {
                     $results = $this->getSheets($pluginName, $filePath, $pluginType);
