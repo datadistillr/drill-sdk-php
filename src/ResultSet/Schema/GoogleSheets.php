@@ -9,8 +9,7 @@ use datadistillr\Drill\ResultSet\Schema;
  * @package thedataist\Drill
  * @author Ben Stewart <ben@datadistillr.com>
  */
-class GoogleSheets extends Schema
-{
+class GoogleSheets extends Schema {
     // region Properties
     /**
      * Title of Google Sheets file
@@ -20,11 +19,10 @@ class GoogleSheets extends Schema
     // endregion
 
     /**
-     * Schema constructor.
+     * Google Sheets Schema constructor.
      * @param object|array $data
      */
-    public function __construct($data = null)
-    {
+    public function __construct($data = null) {
         parent::__construct($data);
 
         $data = (object)$data;
