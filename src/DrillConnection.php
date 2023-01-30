@@ -939,7 +939,7 @@ class DrillConnection
     }
 
     /**
-     * Retrieve list of Sheets/Tabs
+     * Retrieve list of Sheets/Tabs/Tables
      *
      * @param string $pluginName Plugin Name
      * @param string $filePath File Path
@@ -966,6 +966,56 @@ class DrillConnection
 
         return $tables;
     }
+
+  /**
+   * Retrieve a list of MS Access Tables.  See https://github.com/apache/drill/tree/master/contrib/format-access
+   * for documentation about Drill and Microsoft Access.
+   *
+   * @param string $pluginName Plugin Name
+   * @param string $filePath File Path
+   * @return Table[]
+   * @throws Exception
+   */
+    public function getAccessTables(string $pluginName, string $filePath): array {
+      $this->logMessage(LogType::Request, 'Starting getAccessTables()');
+
+      $results = $this->query("SELECT `table` AS `tables`, row_count FROM `{$pluginName}`.{$filePath}")->getRows();
+      $tables = [];
+      if (count($results) >= 1 && isset($results[0]->tables)) {
+        foreach ($results as $row) {
+          $tables[] = new Table(['schema' => $filePath, 'name' => $row->tables]);
+        }
+      }
+
+      $this->logMessage(LogType::Request, 'Ending getAccessTables()');
+      return $tables;
+    }
+
+
+  /**
+   * Retrieve a list of tables in an HDF5 file.  See https://github.com/apache/drill/tree/master/contrib/format-hdf5
+   * for documentation about Drill and HDF5.
+   *
+   * @param string $pluginName Plugin Name
+   * @param string $filePath File Path
+   * @return Table[]
+   * @throws Exception
+   */
+  public function getHDF5Tables(string $pluginName, string $filePath): array {
+    $this->logMessage(LogType::Request, 'Starting getHDF5Tables()');
+
+    $results = $this->query("SELECT `path` AS `tables` FROM `{$pluginName}`.{$filePath} WHERE data_type = 'DATASET'")->getRows();
+    $tables = [];
+    if (count($results) >= 1 && isset($results[0]->tables)) {
+      foreach ($results as $row) {
+        $tables[] = new Table(['schema' => $filePath, 'name' => $row->tables]);
+      }
+    }
+
+    $this->logMessage(LogType::Request, 'Ending getHDF5Tables()');
+    return $tables;
+  }
+
 
     // endregion
     // region Column Methods
@@ -1130,30 +1180,39 @@ class DrillConnection
     }
 
     /**
-     * Get Excel Columns
+     * Get Columns from files that contain more than one table.
      *
      * @param string $pluginName Plugin Name
      * @param string $filePath File Path
-     * @param string $sheetName Sheet Name
+     * @param string $tableName Sheet Name
      * @return array
      * @throws Exception
      */
-    public function getExcelColumns(string $pluginName, string $filePath, string $sheetName): array
+    public function getColumnsFromCompoundFiles(string $pluginName, string $filePath, string $tableName): array
     {
-        $this->logMessage(LogType::Request, 'Starting getExcelColumns()');
+        $this->logMessage(LogType::Request, 'Starting getColumnsFromCompoundFiles()');
 
         $columns = [];
-        $sheetName = $this->removeBackTicks($sheetName);
+        $tableName = $this->removeBackTicks($tableName);
 
         try {
-            $sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'excel', sheetName => '{$sheetName}')) LIMIT 1";
+            if (preg_match('/\.xlsx?`$/', $filePath)) {
+              // Case for Excel Files
+              $sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'excel', sheetName => '{$tableName}')) LIMIT 1";
+            } elseif (preg_match('/\.mdb?`$/', $filePath) || preg_match('/\.accdb?`$/', $filePath)) {
+              // Case for MS Access Files
+              $sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'msaccess', tableName => '{$tableName}')) LIMIT 1";
+            } elseif (preg_match('/\.h5?`$/', $filePath)) {
+              // Case for HDF5
+              $sql = "SELECT * FROM TABLE(`{$pluginName}`.{$filePath} (type => 'hdf5', defaultPath => '{$tableName}')) LIMIT 1";
+            }
             $responseData = $this->query($sql, RequestFunction::MapQuery)->getSchema();
 
             foreach ($responseData as $column) {
                 $columns[] = new Column([
                     'plugin' => $pluginName,
                     'schema' => $filePath,
-                    'table_name' => $sheetName,
+                    'table_name' => $tableName,
                     'name' => $column['column'],
                     'data_type' => $column['data_type']
                 ]);
@@ -1162,7 +1221,7 @@ class DrillConnection
             $this->logMessage(LogType::Error, $e->getMessage());
         }
 
-        $this->logMessage(LogType::Request, 'Ending getExcelColumns()');
+        $this->logMessage(LogType::Request, 'Ending getColumnsFromCompoundFiles()');
         return $columns;
     }
 
@@ -1242,6 +1301,7 @@ class DrillConnection
                 $prevResults = null;
                 $prevItem = null;
                 $excelFile = false;
+                $compoundFile = false;
 
                 do {
                     $nestedData = false;
@@ -1258,6 +1318,9 @@ class DrillConnection
                     if ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && preg_match('/\.xlsx?`$/', $filePath)) {
                         $excelFile = true;
                         $this->logMessage(LogType::Debug, 'Excel File.');
+                    } elseif ($pathLimit >= self::DIRECTORY_DEPTH && count($results) == 1 && $this->isCompoundFile($filePath)) {
+                      $compoundFile = true;
+                      $this->logMessage(LogType::Debug, 'Compound File.');
                     }
 
 
@@ -1283,12 +1346,33 @@ class DrillConnection
                         // Identify if file is an excel file
                         if (isset($prevResults) && $results[0]->name == $lastItem) {
                             // check if submitted path is actually a file plus a sheet name.  If so get columns
-                            $results = $this->getExcelColumns($pluginName, $filePath, $remaining);
+                            $results = $this->getColumnsFromCompoundFiles($pluginName, $filePath, $remaining);
 
                         } elseif ($results[0]->name == $lastItem) {
                             // Path is Excel file.  Return list of sheets.
                             $results = $this->getSheets($pluginName, $filePath, $pluginType);
                         }
+                    } elseif ($compoundFile) {
+                      // Case for MS Access Databases.
+                      if (preg_match('/\.mdb`$/', $filePath) || preg_match('/\.accdb?`$/', $filePath)) {
+                        if (isset($prevResults) && $results[0]->name == $lastItem) {
+                            // check if submitted path is actually a file plus a sheet name.  If so get columns
+                            $results = $this->getColumnsFromCompoundFiles($pluginName, $filePath, $remaining);
+
+                          } elseif ($results[0]->name == $lastItem) {
+                            // Path is Outer table file.  Return list of tables.
+                            $results = $this->getAccessTables($pluginName, $filePath);
+                          }
+                      } elseif (preg_match('/\.h5`$/', $filePath)) {
+                        if (isset($prevResults) && $results[0]->name == $lastItem) {
+                          // check if submitted path is actually a file plus a sheet name.  If so get columns
+                          $results = $this->getColumnsFromCompoundFiles($pluginName, $filePath, $remaining);
+
+                        } elseif ($results[0]->name == $lastItem) {
+                          // Path is Outer table file.  Return list of tables.
+                          $results = $this->getHDF5Tables($pluginName, $filePath);
+                        }
+                      }
                     } elseif (isset($prevResults) && count($results) == 1 && $results[0]->name == $lastItem) {
                         // Found file... now checking for nested data
                         $results = $this->getComplexMaps($pluginName, $filePath, $remaining);
@@ -1394,6 +1478,18 @@ class DrillConnection
         $this->logMessage(LogType::Info, 'Ending getNestedTree() request.');
         return $results;
 
+    }
+
+  /**
+   * Certain files such as MS Access, HDF5 and possibly others contain multiple tables.  This
+   * function identifies whether the file is one of these types.
+   * @param string $path
+   * @return bool
+   */
+    protected function isCompoundFile(string $path) : bool {
+      return preg_match('/\.mdb`$/', $path) ||
+        preg_match('/\.accdb?`$/', $path) ||
+        preg_match('/\.h5?`$/', $path);
     }
 
     // endregion

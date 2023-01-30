@@ -10,19 +10,19 @@ use ReflectionClass;
 
 class DrillTest extends TestCase {
 	
-//	protected $host = 'localhost';
-//	protected $port = 8047;
-//	protected $username = '';
-//	protected $password = '';
-//	protected $ssl = false;
-//	protected $row_limit = 10000;
+	protected $host = 'localhost';
+	protected $port = 8047;
+	protected $username = '';
+	protected $password = '';
+	protected $ssl = false;
+	protected $row_limit = 10000;
 
-	protected $host = 'drill.dev.datadistillr.io';
+	/*protected $host = 'drill.dev.datadistillr.io';
 	protected $port = 443;
 	protected $username = '';
 	protected $password = '';
 	protected $ssl = true;
-	protected $row_limit = 10000;
+	protected $row_limit = 10000;*/
 
 	public function testConnection() {
 		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
@@ -39,7 +39,6 @@ class DrillTest extends TestCase {
 		} finally {
 			$this->assertEquals(false, $active);
 		}
-
 	}
 
 	public function testQuery() {
@@ -51,7 +50,8 @@ class DrillTest extends TestCase {
 		$this->assertEmpty($dh->errorMessage());
 
 		$fieldCount = $result->fieldCount();
-		$this->assertEquals(16, $fieldCount);
+		$this->assertEquals(17, $fieldCount);
+    $this->assertEquals(7, count($result->getRows()));
 	}
 
 	public function testPathsOnJDBC() {
@@ -160,7 +160,8 @@ class DrillTest extends TestCase {
 
 	public function testGetColumns() {
 		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$x = $dh->getColumns('dfs', 'test', 'Dummy Customers-1.xlsx');
+		// $x = $dh->getNestedTree('dfs', 'test', 'Dummy Customers-1.xlsx');
+    $x = $dh->getColumns('dfs', 'test', 'Dummy Customers-1.xlsx');
 		print_r($x);
 		$this->assertTrue(true);
 	}
@@ -170,4 +171,26 @@ class DrillTest extends TestCase {
 		$this->assertEquals("FLOAT8", Result::cleanDataTypeName("FLOAT8"));
 		$this->assertEquals("CHAR", Result::cleanDataTypeName("CHAR(30)"));
 	}
+
+  public function testNestedFields() {
+    $db = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+
+    $tables = $db->getNestedTree('dfs', 'test', 'demo_data_1.xlsx');
+    //print_r($tables);
+
+    $tables = $db->getNestedTree('dfs', 'test', 'demo_data_1.xlsx', 'data');
+    //print_r($tables);
+
+    $tables = $db->getNestedTree('dfs', 'kushi', 'CMS.mdb', 'Address');
+    //print_r($tables);
+
+    $tables = $db->getNestedTree('dfs', 'kushi', 'CMS.mdb');
+    //print_r($tables);
+
+    $tables = $db->getNestedTree('dfs', 'test', 'scalar.h5');
+    print_r($tables);
+
+    $tables = $db->getNestedTree('dfs', 'test', 'scalar.h5', 'datatype', 's10');
+    print_r($tables);
+  }
 }
