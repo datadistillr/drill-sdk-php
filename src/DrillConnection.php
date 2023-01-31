@@ -963,7 +963,6 @@ class DrillConnection
         }
 
         $this->logMessage(LogType::Request, 'Ending getSheets()');
-
         return $tables;
     }
 
