@@ -8,54 +8,69 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 
-class DrillTest extends TestCase {
-	
-//	protected $host = 'localhost';
-//	protected $port = 8047;
-//	protected $username = '';
-//	protected $password = '';
-//	protected $ssl = false;
-//	protected $row_limit = 10000;
+final class DrillTest extends TestCase
+{
+  protected static bool $USE_LOCAL_DRILL = True;
+  protected static string $host;
+  protected static int $port;
+  protected static string $username;
+  protected static string $password;
+  protected static bool $ssl;
+  protected static int $row_limit;
 
-	protected $host = 'drill.dev.datadistillr.io';
-	protected $port = 443;
-	protected $username = '';
-	protected $password = '';
-	protected $ssl = true;
-	protected $row_limit = 10000;
+  public function setup() : void {
+    if (self::$USE_LOCAL_DRILL) {
+      self::$host = 'localhost';
+      self::$port = 8047;
+      self::$username = '';
+      self::$password = '';
+      self::$ssl = false;
+      self::$row_limit = 10000;
+    } else {
+      self::$host = 'drill.dev.datadistillr.io';
+      self::$port = 443;
+      self::$username = '';
+      self::$password = '';
+      self::$ssl = true;
+      self::$row_limit = 10000;
+    }
+  }
 
 	public function testConnection() {
-		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+    $this->setup();
+    $dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
 		$active = $dh->isActive();
 		$this->assertEquals(true, $active);
 	}
 
 	public function testBadConnection() {
-		try {
-			$dh = new DrillConnection($this->host, 8048);
+    $this->setup();
+    try {
+			$dh = new DrillConnection(self::$host, 8048);
 			$active = $dh->isActive();
 		} catch(Exception $e) {
 			$active = false;
 		} finally {
 			$this->assertEquals(false, $active);
 		}
-
 	}
 
 	public function testQuery() {
-
-		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+    $this->setup();
+		$dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
 		$result = $dh->query('SELECT * FROM `cp`.`employee.json` LIMIT 7');
 
 
 		$this->assertEmpty($dh->errorMessage());
 
 		$fieldCount = $result->fieldCount();
-		$this->assertEquals(16, $fieldCount);
+		$this->assertEquals(17, $fieldCount);
+    $this->assertEquals(7, count($result->getRows()));
 	}
 
 	public function testPathsOnJDBC() {
-		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+    $this->setup();
+    $dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
 
 		// TODO: test this on Postgres
 		// TODO: test this with MsSql
@@ -83,7 +98,8 @@ class DrillTest extends TestCase {
 	}
 
 	public function testPlugins() {
-		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+    $this->setup();
+    $dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
 		$plugins = $dh->getAllStoragePlugins();
 		$this->assertEquals(17, count($plugins));
 
@@ -92,7 +108,8 @@ class DrillTest extends TestCase {
 	}
 
 	public function testErrorMessage() {
-    $dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+    $this->setup();
+    $dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
     try {
 		$result = $dh->query("SELECT CAST('abc' AS INT) FROM (VALUES(1))");
 	} catch (Exception $e) {
@@ -104,7 +121,8 @@ class DrillTest extends TestCase {
   }
 
 	public function testFormatTable() {
-		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+    $this->setup();
+    $dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
 		$reflector = new ReflectionClass( 'datadistillr\Drill\DrillConnection' );
 		$fdtMethod = $reflector->getMethod('formatDrillTable');
 		$fdtMethod->setAccessible(true);
@@ -134,14 +152,16 @@ class DrillTest extends TestCase {
 	}
 
 	public function testSchemaNames() {
-		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+    $this->setup();
+    $dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
 		$this->assertContains('dfs.root', $dh->getSchemaNames());
 	}
 
 	public function testGetPluginType() {
-		$startTime = new \DateTime();
+    $this->setup();
+    $startTime = new \DateTime();
 		echo 'Start getPluginType(): ' . $startTime->format('Y-m-d H:i:s v') . "\n";
-		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+		$dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
 		$plugin_type = $dh->getPluginType('mariadb');
 		$this->assertEquals('jdbc', $plugin_type);
 		$plugin_type = $dh->getPluginType('mdubs_postgres');
@@ -152,22 +172,50 @@ class DrillTest extends TestCase {
 	}
 
 	public function testGetTableNames() {
-		// TODO: validate this
-		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
+    $this->setup();
+    // TODO: validate this
+		$dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
 		print_r($dh->getTableNames('dfs', 'test'));
 		$this->assertTrue(true);
 	}
 
 	public function testGetColumns() {
-		$dh = new DrillConnection($this->host, $this->port, $this->username, $this->password, $this->ssl, $this->row_limit);
-		$x = $dh->getColumns('dfs', 'test', 'Dummy Customers-1.xlsx');
+    $this->setup();
+    $dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
+		// $x = $dh->getNestedTree('dfs', 'test', 'Dummy Customers-1.xlsx');
+    $x = $dh->getColumns('dfs', 'test', 'Dummy Customers-1.xlsx');
 		print_r($x);
 		$this->assertTrue(true);
 	}
 
 	public function testCleanDataTypeName() {
-		$this->assertEquals("DECIMAL", Result::cleanDataTypeName("DECIMAL(3, 4)"));
+    $this->setup();
+    $this->assertEquals("DECIMAL", Result::cleanDataTypeName("DECIMAL(3, 4)"));
 		$this->assertEquals("FLOAT8", Result::cleanDataTypeName("FLOAT8"));
 		$this->assertEquals("CHAR", Result::cleanDataTypeName("CHAR(30)"));
 	}
+
+  public function testNestedFields() {
+    $this->setup();
+
+    $db = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
+
+    $tables = $db->getNestedTree('dfs', 'test', 'demo_data_1.xlsx');
+    print_r($tables);
+
+    //$tables = $db->getNestedTree('dfs', 'test', 'demo_data_1.xlsx', 'data');
+    //print_r($tables);
+
+    //$tables = $db->getNestedTree('dfs', 'kushi', 'CMS.mdb', 'Address');
+    //print_r($tables);
+
+    $tables = $db->getNestedTree('dfs', 'kushi', 'CMS.mdb');
+    print_r($tables);
+
+    //$tables = $db->getNestedTree('dfs', 'test', 'scalar.h5');
+    //print_r($tables);
+
+    //$tables = $db->getNestedTree('dfs', 'test', 'scalar.h5', 'datatype', 's10');
+    //print_r($tables);
+  }
 }
