@@ -22,16 +22,24 @@ class OAuthTokenData extends RequestData {
 	 */
 	public string $refreshToken;
 
+	/**
+	 * Expires In
+	 * @var int $expiresIn
+	 */
+	public int $expiresIn;
+
     /**
      * OAuthTokenData Constructor
      *
      * @param string $accessToken Access Token
      * @param string $refreshToken Refresh Token
+     * @param int $expiresIn Expires In
      */
-	public function __construct(string $accessToken, string $refreshToken) {
+	public function __construct(string $accessToken, string $refreshToken, int $expiresIn) {
 		parent::__construct();
 
 		$this->accessToken = $accessToken;
 		$this->refreshToken = $refreshToken;
+		$this->expiresIn = $expiresIn;
 	}
 }

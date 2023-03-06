@@ -531,16 +531,17 @@ class DrillConnection
      * @param string $pluginName Storage Plugin Name
      * @param string $accessToken Access Token
      * @param string $refreshToken Refresh Token
+     * @param int $expiresIn Expires In
      * @return bool|null
      * @throws Exception
      */
-    public function updateOAuthTokens(string $pluginName, string $accessToken, string $refreshToken): ?bool
+    public function updateOAuthTokens(string $pluginName, string $accessToken, string $refreshToken, int $expiresIn): ?bool
     {
         $this->logMessage(LogType::Debug, 'Starting updateOAuthTokens');
 
         $url = new RequestUrl(RequestFunction::UpdateOAuthTokens, $this->hostname, $this->port, $this->ssl, $pluginName);
 
-        $postData = new OAuthTokenData($accessToken, $refreshToken);
+        $postData = new OAuthTokenData($accessToken, $refreshToken, $expiresIn);
 
         try {
             $response = $this->drillRequest($url, $postData);
