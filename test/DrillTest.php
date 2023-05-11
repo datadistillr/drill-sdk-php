@@ -97,6 +97,15 @@ final class DrillTest extends TestCase
 		print_r($result);
 	}
 
+  public function testElasticSearchTree() {
+    $this->setup();
+    $dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);
+
+    $result = $dh->getNestedTree('elastic', 'search-ddrtest');
+    $this->assertCount(15, $result);
+    print_r($result);
+  }
+
 	public function testPlugins() {
     $this->setup();
     $dh = new DrillConnection(self::$host, self::$port, self::$username, self::$password, self::$ssl, self::$row_limit);

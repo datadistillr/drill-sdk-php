@@ -1054,9 +1054,13 @@ class DrillConnection
 
         // Since MongoDB uses the ** notation, bypass that and query the data directly
         // TODO: Add API functionality here as well
-        if ($pluginType === 'file' || $pluginType === 'mongo' || $pluginType === 'splunk') {
+        if ($pluginType === 'file' || $pluginType === 'mongo' || $pluginType === 'splunk' || $pluginType === 'elastic') {
 
-            $views = $this->getViewNames($plugin, $schema);
+            $views = [];
+            // Views only exist in file systems
+            if ($pluginType === 'file') {
+              $views = $this->getViewNames($plugin, $schema);
+            }
 
             $pluginSchema = $plugin;
             if (isset($schema)) {
@@ -1112,7 +1116,7 @@ class DrillConnection
      */
     public function getFileColumns(string $fullformattedPath): array
     {
-
+        // TODO Populate the rest of the column data.
         $this->logMessage(LogType::Query, 'Starting getFileColumns');
 
         $columns = [];
