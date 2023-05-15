@@ -11,10 +11,10 @@ mysql interface, so if you are familiar with that, you already pretty much know 
 ## Installing the Library
 This library can be installed using [Composer](https://getcomposer.org) by using the following command:
 ```
-composer require "datadistillr/drill-sdk-php:^0.7.16"
+composer require "datadistillr/drill-sdk-php:^0.7.17"
 ```
 
-The current pre-release version is: `0.7.16`
+The current pre-release version is: `0.7.17`
 
 ## Using the Connector
 The first step is to make a Drill connection handle.  The module uses Drill's RESTful interface, so it will not
